@@ -20,8 +20,9 @@ Commands:
   calendar   Create and manage calendars
   schedule   Create and manage schedules
   meeting    Create and manage reserved meetings
+  wedrive    Manage WeDrive spaces
 
-Run "wecom-cli calendar help", "wecom-cli schedule help", or "wecom-cli meeting help" for details.
+Run "<command> help" for command-specific details.
 `)
 }
 
@@ -170,5 +171,41 @@ List flags:
   --cursor                 Pagination cursor
   --limit                  Page size, 1-100
   --dry-run                Print request JSON without calling WeCom
+`)
+}
+
+func printWeDriveUsage() {
+	fmt.Print(`WeDrive commands:
+  wecom-cli wedrive space <subcommand> [flags]
+
+Run "wecom-cli wedrive space help" for details.
+`)
+}
+
+func printWeDriveSpaceUsage() {
+	fmt.Print(`WeDrive space commands:
+  wecom-cli wedrive space create --space-name NAME [--member USERID:AUTH] [--department ID:AUTH]
+  wecom-cli wedrive space info --spaceid SPACEID
+  wecom-cli wedrive space new-info --spaceid SPACEID
+  wecom-cli wedrive space rename --spaceid SPACEID --space-name NAME
+  wecom-cli wedrive space dismiss --spaceid SPACEID
+  wecom-cli wedrive space share --spaceid SPACEID
+  wecom-cli wedrive space acl-add --spaceid SPACEID --member USERID:AUTH
+  wecom-cli wedrive space acl-del --spaceid SPACEID --member USERID
+  wecom-cli wedrive space setting --spaceid SPACEID [flags]
+
+Auth specs:
+  --member USERID:AUTH        Member auth. Auth: 1 download, 4 preview, 7 space admin
+  --department ID:AUTH        Department auth. Auth: 1 download
+  acl-del accepts --member USERID and --department ID without auth
+
+Setting flags:
+  --enable-watermark true|false
+  --share-url-no-approve true|false
+  --share-url-no-approve-default-auth 1|2|4|5|200
+  --enable-confidential-mode true|false
+  --default-file-scope 1|2
+  --ban-share-external true|false
+  --dry-run
 `)
 }

@@ -226,3 +226,46 @@ Update, fetch, list, or cancel meetings:
 
 ./wecom-cli meeting cancel --meeting-id MEETING_ID
 ```
+
+## WeDrive Space Commands
+
+Create a WeDrive space and grant initial permissions:
+
+```bash
+./wecom-cli wedrive space create \
+  --space-name "Project Space" \
+  --member 029235:7
+```
+
+Manage space metadata:
+
+```bash
+./wecom-cli wedrive space info --spaceid SPACEID
+./wecom-cli wedrive space new-info --spaceid SPACEID
+./wecom-cli wedrive space rename --spaceid SPACEID --space-name "Renamed Space"
+./wecom-cli wedrive space share --spaceid SPACEID
+./wecom-cli wedrive space dismiss --spaceid SPACEID
+```
+
+Manage members or departments:
+
+```bash
+./wecom-cli wedrive space acl-add \
+  --spaceid SPACEID \
+  --member 029235:1
+
+./wecom-cli wedrive space acl-del \
+  --spaceid SPACEID \
+  --member 029235
+```
+
+Update security settings:
+
+```bash
+./wecom-cli wedrive space setting \
+  --spaceid SPACEID \
+  --enable-watermark false \
+  --share-url-no-approve true \
+  --share-url-no-approve-default-auth 1 \
+  --default-file-scope 2
+```
