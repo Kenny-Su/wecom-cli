@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -20,6 +21,29 @@ func (s *stringList) Set(value string) error {
 	if value != "" {
 		*s = append(*s, value)
 	}
+	return nil
+}
+
+type intList []int
+
+func (s *intList) String() string {
+	values := make([]string, 0, len(*s))
+	for _, value := range *s {
+		values = append(values, fmt.Sprintf("%d", value))
+	}
+	return strings.Join(values, ",")
+}
+
+func (s *intList) Set(value string) error {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return err
+	}
+	*s = append(*s, parsed)
 	return nil
 }
 
@@ -91,4 +115,8 @@ func printPrettyJSON(value any) error {
 
 func isHelp(arg string) bool {
 	return arg == "help" || arg == "-h" || arg == "--help"
+}
+
+func intPtr(value int) *int {
+	return &value
 }

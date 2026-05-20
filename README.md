@@ -114,3 +114,67 @@ Delete a calendar:
 ./wecom-cli calendar delete \
   --cal-id wcdV_NCwAAfRaN-5hxmoypLk7GeoeOCA
 ```
+
+## Schedule Commands
+
+Create a schedule. Times accept Unix seconds or RFC3339:
+
+```bash
+./wecom-cli schedule create \
+  --cal-id wcdV_NCwAAfRaN-5hxmoypLk7GeoeOCA \
+  --summary "Project Review" \
+  --start 2026-05-20T15:00:00+08:00 \
+  --end 2026-05-20T16:00:00+08:00 \
+  --attendee 029235 \
+  --remind-time-diff -300
+```
+
+Update a schedule. The official update API is overwrite-style; use
+`--skip-attendees` when you do not want to overwrite the attendee list:
+
+```bash
+./wecom-cli schedule update \
+  --schedule-id SCHEDULE_ID \
+  --summary "Project Review Updated" \
+  --start 2026-05-20T15:00:00+08:00 \
+  --end 2026-05-20T16:30:00+08:00 \
+  --skip-attendees
+```
+
+Get schedule details or list schedules under a calendar:
+
+```bash
+./wecom-cli schedule get --schedule-id SCHEDULE_ID
+
+./wecom-cli schedule list \
+  --cal-id wcdV_NCwAAfRaN-5hxmoypLk7GeoeOCA \
+  --offset 0 \
+  --limit 100
+```
+
+Cancel a schedule:
+
+```bash
+./wecom-cli schedule delete --schedule-id SCHEDULE_ID
+```
+
+For repeated schedules, pass the operation mode and occurrence start time:
+
+```bash
+./wecom-cli schedule delete \
+  --schedule-id SCHEDULE_ID \
+  --op-mode 1 \
+  --op-start-time 2026-05-20T15:00:00+08:00
+```
+
+Add or remove attendees without overwriting the whole attendee list:
+
+```bash
+./wecom-cli schedule add-attendees \
+  --schedule-id SCHEDULE_ID \
+  --attendee 029235
+
+./wecom-cli schedule remove-attendees \
+  --schedule-id SCHEDULE_ID \
+  --attendee 029235
+```

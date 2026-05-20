@@ -18,8 +18,9 @@ Global flags:
 
 Commands:
   calendar   Create and manage calendars
+  schedule   Create and manage schedules
 
-Run "wecom-cli calendar help" for details.
+Run "wecom-cli calendar help" or "wecom-cli schedule help" for details.
 `)
 }
 
@@ -68,5 +69,57 @@ Get flags:
 Delete flags:
   --cal-id              Calendar ID. Required
   --dry-run             Print request JSON without calling WeCom
+`)
+}
+
+func printScheduleUsage() {
+	fmt.Print(`Schedule commands:
+  wecom-cli schedule create --start TIME --end TIME [flags]
+  wecom-cli schedule update --schedule-id ID --start TIME --end TIME [flags]
+  wecom-cli schedule get --schedule-id ID [--schedule-id ID]
+  wecom-cli schedule list --cal-id CAL_ID [--offset 0] [--limit 500]
+  wecom-cli schedule delete --schedule-id ID [--op-mode 1 --op-start-time TIME]
+  wecom-cli schedule add-attendees --schedule-id ID --attendee USERID
+  wecom-cli schedule remove-attendees --schedule-id ID --attendee USERID
+
+Create/update flags:
+  --start                 Start time. Unix seconds or RFC3339. Required
+  --end                   End time. Unix seconds or RFC3339. Required
+  --cal-id                Calendar ID. Create only
+  --schedule-id           Schedule ID. Update only
+  --summary               Schedule title
+  --description           Schedule description
+  --location              Schedule location
+  --whole-day             Mark as whole-day schedule
+  --admin                 Admin userid. Repeatable
+  --admin-name            Admin employee name to resolve through agw-cli. Repeatable
+  --attendee              Attendee userid. Repeatable
+  --attendee-name         Attendee employee name to resolve through agw-cli. Repeatable
+  --remind                Enable reminder
+  --remind-before         Seconds before event reminder
+  --remind-time-diff      Reminder diff from start time. Repeatable
+  --repeat                Enable repeat schedule
+  --repeat-type           0 daily, 1 weekly, 2 monthly, 5 yearly, 7 workday
+  --repeat-until          Repeat end time. Unix seconds or RFC3339
+  --custom-repeat         Enable custom repeat
+  --repeat-interval       Custom repeat interval
+  --repeat-day-of-week    Custom repeat weekday. Repeatable
+  --repeat-day-of-month   Custom repeat month day. Repeatable
+  --timezone              UTC offset, -12 to 12
+  --skip-attendees        Do not update attendees. Update only
+  --op-mode               Repeat operation mode. 0 all, 1 current, 2 future
+  --op-start-time         Repeat occurrence start time for op-mode 1 or 2
+  --dry-run               Print request JSON without calling WeCom
+
+Get/list/delete/attendee flags:
+  --schedule-id           Schedule ID. Repeatable for get
+  --cal-id                Calendar ID for list
+  --offset                List pagination offset
+  --limit                 List pagination limit, 1-1000
+  --attendee              Attendee userid. Repeatable
+  --attendee-name         Attendee employee name to resolve through agw-cli. Repeatable
+  --op-mode               Delete repeat operation mode. 0 all, 1 current, 2 future
+  --op-start-time         Delete repeat occurrence start time for op-mode 1 or 2
+  --dry-run               Print request JSON without calling WeCom
 `)
 }
