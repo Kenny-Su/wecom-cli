@@ -19,8 +19,9 @@ Global flags:
 Commands:
   calendar   Create and manage calendars
   schedule   Create and manage schedules
+  meeting    Create and manage reserved meetings
 
-Run "wecom-cli calendar help" or "wecom-cli schedule help" for details.
+Run "wecom-cli calendar help", "wecom-cli schedule help", or "wecom-cli meeting help" for details.
 `)
 }
 
@@ -121,5 +122,53 @@ Get/list/delete/attendee flags:
   --op-mode               Delete repeat operation mode. 0 all, 1 current, 2 future
   --op-start-time         Delete repeat occurrence start time for op-mode 1 or 2
   --dry-run               Print request JSON without calling WeCom
+`)
+}
+
+func printMeetingUsage() {
+	fmt.Print(`Meeting commands:
+  wecom-cli meeting create --admin-userid USERID --title TITLE --start TIME --duration SECONDS [flags]
+  wecom-cli meeting update --meeting-id ID [flags]
+  wecom-cli meeting get --meeting-id ID
+  wecom-cli meeting list --userid USERID [--begin TIME] [--end TIME] [--cursor CURSOR] [--limit 100]
+  wecom-cli meeting cancel --meeting-id ID
+
+Create/update flags:
+  --meeting-id             Meeting ID. Update/get/cancel only
+  --admin-userid           Meeting admin userid. Create required unless --admin-name
+  --admin-name             Meeting admin employee name to resolve through agw-cli
+  --title                  Meeting title. Create required
+  --start                  Meeting start time. Unix seconds or RFC3339
+  --duration               Meeting duration in seconds, 300-86399
+  --description            Meeting description
+  --location               Meeting location
+  --cal-id                 Calendar ID
+  --invitee                Invitee userid. Repeatable
+  --invitee-name           Invitee employee name to resolve through agw-cli. Repeatable
+  --remind-scope           1 none, 2 hosts, 3 all, 4 ring-users
+  --password               Meeting password, 4-6 digits
+  --waiting-room           true or false
+  --allow-enter-before-host true or false
+  --enter-mute             0 off, 1 on, 2 auto
+  --screen-watermark       true or false
+  --host                   Host userid. Repeatable
+  --host-name              Host employee name to resolve through agw-cli. Repeatable
+  --ring-user              Ring userid. Repeatable
+  --ring-user-name         Ring employee name to resolve through agw-cli. Repeatable
+  --repeat                 Enable repeat meeting
+  --repeat-type            0 daily, 1 weekly, 2 monthly, 7 workday
+  --repeat-until           Repeat end time. Unix seconds or RFC3339
+  --repeat-interval        Repeat interval
+  --remind-before          Meeting reminder before start in seconds. Repeatable
+  --dry-run                Print request JSON without calling WeCom
+
+List flags:
+  --userid                 Member userid
+  --user-name              Employee name to resolve through agw-cli
+  --begin                  Begin time. Unix seconds or RFC3339
+  --end                    End time. Unix seconds or RFC3339
+  --cursor                 Pagination cursor
+  --limit                  Page size, 1-100
+  --dry-run                Print request JSON without calling WeCom
 `)
 }

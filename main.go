@@ -37,6 +37,13 @@ func run(args []string) error {
 		}
 		c := &wecomClient{cfg: cfg, http: cfg.HTTPClient}
 		return runSchedule(c, rest[1:])
+	case "meeting":
+		if len(rest) == 1 || isHelp(rest[1]) {
+			printMeetingUsage()
+			return nil
+		}
+		c := &wecomClient{cfg: cfg, http: cfg.HTTPClient}
+		return runMeeting(c, rest[1:])
 	default:
 		return fmt.Errorf("unknown command %q", rest[0])
 	}

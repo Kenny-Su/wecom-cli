@@ -178,3 +178,51 @@ Add or remove attendees without overwriting the whole attendee list:
   --schedule-id SCHEDULE_ID \
   --attendee 029235
 ```
+
+## Meeting Commands
+
+Create a reserved meeting:
+
+```bash
+./wecom-cli meeting create \
+  --admin-userid 029235 \
+  --title "Project Review" \
+  --start 2026-05-20T15:00:00+08:00 \
+  --duration 1800 \
+  --invitee 029235 \
+  --location "Room 1005"
+```
+
+Optional meeting settings can be passed as flags:
+
+```bash
+./wecom-cli meeting create \
+  --admin-userid 029235 \
+  --title "Project Review" \
+  --start 2026-05-20T15:00:00+08:00 \
+  --duration 1800 \
+  --invitee 029235 \
+  --waiting-room false \
+  --allow-enter-before-host true \
+  --enter-mute 2 \
+  --remind-before 900
+```
+
+Update, fetch, list, or cancel meetings:
+
+```bash
+./wecom-cli meeting update \
+  --meeting-id MEETING_ID \
+  --title "Updated Project Review" \
+  --start 2026-05-20T16:00:00+08:00 \
+  --duration 3600
+
+./wecom-cli meeting get --meeting-id MEETING_ID
+
+./wecom-cli meeting list \
+  --userid 029235 \
+  --begin 2026-05-01T00:00:00+08:00 \
+  --end 2026-05-31T23:59:59+08:00
+
+./wecom-cli meeting cancel --meeting-id MEETING_ID
+```
