@@ -269,3 +269,65 @@ Update security settings:
   --share-url-no-approve-default-auth 1 \
   --default-file-scope 2
 ```
+
+## WeDrive File Commands
+
+List files in a space folder and inspect metadata:
+
+```bash
+./wecom-cli wedrive file list \
+  --spaceid SPACEID \
+  --fatherid SPACEID \
+  --limit 100
+
+./wecom-cli wedrive file info --fileid FILEID
+```
+
+Create folders or online documents:
+
+```bash
+./wecom-cli wedrive file create \
+  --spaceid SPACEID \
+  --fatherid SPACEID \
+  --file-type 1 \
+  --file-name "Project Folder"
+```
+
+Upload small files directly, or use chunk upload for larger files:
+
+```bash
+./wecom-cli wedrive file upload \
+  --spaceid SPACEID \
+  --fatherid FOLDER_FILEID \
+  --path ./report.pdf
+
+./wecom-cli wedrive file upload-chunk \
+  --spaceid SPACEID \
+  --fatherid FOLDER_FILEID \
+  --path ./large.zip
+```
+
+Manage file location, name, sharing, and permissions:
+
+```bash
+./wecom-cli wedrive file rename --fileid FILEID --new-name "New Name.pdf"
+./wecom-cli wedrive file move --fatherid TARGET_FOLDER_FILEID --fileid FILEID --replace true
+./wecom-cli wedrive file share --fileid FILEID
+./wecom-cli wedrive file permission --fileid FILEID
+
+./wecom-cli wedrive file acl-add --fileid FILEID --member 029235:1
+./wecom-cli wedrive file acl-del --fileid FILEID --member 029235
+
+./wecom-cli wedrive file setting --fileid FILEID --auth-scope 2 --auth 1
+./wecom-cli wedrive file secure-setting \
+  --fileid FILEID \
+  --watermark-text "Confidential" \
+  --margin-type 1 \
+  --show-text true
+```
+
+Delete files:
+
+```bash
+./wecom-cli wedrive file delete --fileid FILEID
+```

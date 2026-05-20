@@ -56,6 +56,12 @@ func runWeDrive(c *wecomClient, args []string) error {
 			return nil
 		}
 		return runWeDriveSpace(c, args[1:])
+	case "file":
+		if len(args) == 1 || isHelp(args[1]) {
+			printWeDriveFileUsage()
+			return nil
+		}
+		return runWeDriveFile(c, args[1:])
 	case "help", "-h", "--help":
 		printWeDriveUsage()
 		return nil

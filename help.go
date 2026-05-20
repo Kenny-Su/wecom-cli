@@ -177,8 +177,10 @@ List flags:
 func printWeDriveUsage() {
 	fmt.Print(`WeDrive commands:
   wecom-cli wedrive space <subcommand> [flags]
+  wecom-cli wedrive file <subcommand> [flags]
 
 Run "wecom-cli wedrive space help" for details.
+Run "wecom-cli wedrive file help" for details.
 `)
 }
 
@@ -206,6 +208,50 @@ Setting flags:
   --enable-confidential-mode true|false
   --default-file-scope 1|2
   --ban-share-external true|false
+  --dry-run
+`)
+}
+
+func printWeDriveFileUsage() {
+	fmt.Print(`WeDrive file commands:
+  wecom-cli wedrive file list --spaceid SPACEID --fatherid FATHERID
+  wecom-cli wedrive file info --fileid FILEID
+  wecom-cli wedrive file create --spaceid SPACEID --fatherid FATHERID --file-type 1 --file-name NAME
+  wecom-cli wedrive file upload --spaceid SPACEID --fatherid FATHERID --path ./report.pdf
+  wecom-cli wedrive file upload-chunk --spaceid SPACEID --fatherid FATHERID --path ./large.zip
+  wecom-cli wedrive file download --fileid FILEID
+  wecom-cli wedrive file rename --fileid FILEID --new-name NAME
+  wecom-cli wedrive file move --fatherid FOLDER_ID --fileid FILEID [--replace true]
+  wecom-cli wedrive file delete --fileid FILEID
+  wecom-cli wedrive file share --fileid FILEID
+  wecom-cli wedrive file permission --fileid FILEID
+  wecom-cli wedrive file acl-add --fileid FILEID --member USERID:1
+  wecom-cli wedrive file acl-del --fileid FILEID --member USERID
+  wecom-cli wedrive file setting --fileid FILEID --auth-scope 2 --auth 1
+  wecom-cli wedrive file secure-setting --fileid FILEID [flags]
+
+File flags:
+  --spaceid              Space ID
+  --fatherid             Parent folder file ID. Root uses the space ID
+  --fileid               File ID. Repeatable for move/delete
+  --file-type            1 folder, 3 doc, 4 sheet
+  --file-name            File name. Upload defaults to --path basename
+  --path                 Local file path for upload/upload-chunk
+  --base64               Base64 file content for normal upload
+  --selected-ticket      selectedTicket from WeDrive/file picker JSAPI
+  --sort-type            Sort type for list
+  --start                Pagination start for list
+  --limit                Pagination limit for list, 1-1000
+  --replace              Move overwrite flag, true or false
+  --auth-scope           1 specified users, 2 corp internal, 3 corp external, 4 internal approval, 5 external approval
+  --auth                 File share/member auth. 1 browse/download, 4 preview
+  --member               userid[:auth]. Repeatable
+  --department           departmentid[:auth]. Repeatable
+  --watermark-text       Watermark text for secure-setting
+  --margin-type          1 low-density, 2 high-density
+  --show-visitor-name    true or false
+  --show-text            true or false
+  --skip-push-card       Chunk upload completion card flag, true or false
   --dry-run
 `)
 }
