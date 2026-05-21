@@ -793,7 +793,7 @@ func (c *wecomClient) postWeDriveJSON(path string, req any, out any) error {
 	if err != nil {
 		return fmt.Errorf("marshal request body: %w", err)
 	}
-	u := c.cfg.BaseURL + path + "?access_token=" + url.QueryEscape(token)
+	u := defaultBaseURL + path + "?access_token=" + url.QueryEscape(token)
 	httpReq, err := http.NewRequest(http.MethodPost, u, bytes.NewReader(rawBody))
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)

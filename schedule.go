@@ -86,9 +86,7 @@ type scheduleInput struct {
 	End                   string
 	WholeDay              bool
 	Admins                []string
-	AdminNames            []string
 	Attendees             []string
-	AttendeeNames         []string
 	Remind                bool
 	RemindBeforeEventSecs int
 	RemindTimeDiffs       []int
@@ -100,6 +98,7 @@ type scheduleInput struct {
 	RepeatDayOfWeek       []int
 	RepeatDayOfMonth      []int
 	Timezone              *int
+	AgentID               int64
 }
 
 type scheduleUpdateInput struct {
@@ -264,17 +263,16 @@ func scheduleChangeAttendees(c *wecomClient, args []string, add bool) error {
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	scheduleID := fs.String("schedule-id", "", "schedule ID")
-	var attendees, attendeeNames stringList
+	var attendees stringList
 	dryRun := fs.Bool("dry-run", false, "print request JSON without calling WeCom")
 	fs.Var(&attendees, "attendee", "attendee userid; repeatable")
-	fs.Var(&attendeeNames, "attendee-name", "attendee employee name to resolve through agw-cli; repeatable")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if fs.NArg() > 0 {
 		return fmt.Errorf("unexpected argument %q", fs.Arg(0))
 	}
-	req, err := buildScheduleAttendeesRequest(c.cfg, *scheduleID, attendees, attendeeNames)
+	req, err := buildScheduleAttendeesRequest(*scheduleID, attendees)
 	if err != nil {
 		return err
 	}
@@ -302,10 +300,11 @@ func bindScheduleFlags(fs *flag.FlagSet, includeID bool) (*scheduleInput, *bool)
 	fs.StringVar(&input.Start, "start", "", "start time, Unix seconds or RFC3339")
 	fs.StringVar(&input.End, "end", "", "end time, Unix seconds or RFC3339")
 	fs.BoolVar(&input.WholeDay, "whole-day", false, "mark schedule as whole day")
+	if !includeID {
+		fs.Int64Var(&input.AgentID, "agentid", 0, "authorized app agentid")
+	}
 	fs.Var((*stringList)(&input.Admins), "admin", "admin userid; repeatable")
-	fs.Var((*stringList)(&input.AdminNames), "admin-name", "admin employee name; repeatable")
 	fs.Var((*stringList)(&input.Attendees), "attendee", "attendee userid; repeatable")
-	fs.Var((*stringList)(&input.AttendeeNames), "attendee-name", "attendee employee name; repeatable")
 	fs.BoolVar(&input.Remind, "remind", false, "enable reminder")
 	fs.IntVar(&input.RemindBeforeEventSecs, "remind-before", -1, "seconds before event reminder")
 	fs.Var((*intList)(&input.RemindTimeDiffs), "remind-time-diff", "reminder diff from start time in seconds; repeatable")
@@ -344,7 +343,7 @@ func buildScheduleCreateRequest(cfg config, input scheduleInput) (scheduleReques
 	if err != nil {
 		return scheduleRequest{}, err
 	}
-	return scheduleRequest{Schedule: payload, AgentID: cfg.AgentID}, nil
+	return scheduleRequest{Schedule: payload, AgentID: input.AgentID}, nil
 }
 
 func buildScheduleUpdateRequest(cfg config, input scheduleUpdateInput) (scheduleUpdateRequest, error) {
@@ -399,14 +398,14 @@ func buildSchedulePayload(cfg config, input scheduleInput, update bool) (schedul
 	if len([]rune(strings.TrimSpace(input.Location))) > 128 {
 		return schedulePayload{}, errors.New("--location must be at most 128 characters")
 	}
-	adminIDs, err := resolveUsers(cfg, input.Admins, input.AdminNames)
+	adminIDs, err := parseUserIDs(input.Admins)
 	if err != nil {
 		return schedulePayload{}, err
 	}
 	if len(adminIDs) > 3 {
 		return schedulePayload{}, errors.New("schedule admins can include at most 3 users")
 	}
-	attendees, err := buildScheduleAttendees(cfg, input.Attendees, input.AttendeeNames)
+	attendees, err := buildScheduleAttendees(input.Attendees)
 	if err != nil {
 		return schedulePayload{}, err
 	}
@@ -528,27 +527,26 @@ func buildScheduleDeleteRequest(scheduleID string, opMode int, opStartTime strin
 	return req, nil
 }
 
-func buildScheduleAttendeesRequest(cfg config, scheduleID string, userIDs []string, names []string) (scheduleAttendeesRequest, error) {
+func buildScheduleAttendeesRequest(scheduleID string, userIDs []string) (scheduleAttendeesRequest, error) {
 	scheduleID = strings.TrimSpace(scheduleID)
 	if scheduleID == "" {
 		return scheduleAttendeesRequest{}, errors.New("--schedule-id is required")
 	}
-	attendees, err := buildScheduleAttendees(cfg, userIDs, names)
+	attendees, err := buildScheduleAttendees(userIDs)
 	if err != nil {
 		return scheduleAttendeesRequest{}, err
 	}
 	if len(attendees) == 0 {
-		return scheduleAttendeesRequest{}, errors.New("--attendee or --attendee-name is required")
+		return scheduleAttendeesRequest{}, errors.New("--attendee is required")
 	}
 	return scheduleAttendeesRequest{ScheduleID: scheduleID, Attendees: attendees}, nil
 }
 
-func buildScheduleAttendees(cfg config, userIDs []string, names []string) ([]scheduleAttendee, error) {
-	resolved, err := resolveUsers(cfg, userIDs, names)
+func buildScheduleAttendees(userIDs []string) ([]scheduleAttendee, error) {
+	resolved, err := parseUserIDs(userIDs)
 	if err != nil {
 		return nil, err
 	}
-	resolved = uniqueStrings(resolved)
 	if len(resolved) > 1000 {
 		return nil, errors.New("schedule attendees can include at most 1000 users")
 	}

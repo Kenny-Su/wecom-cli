@@ -19,12 +19,9 @@ const (
 )
 
 type config struct {
-	BaseURL    string
 	CorpID     string
 	CorpSecret string
-	AgentID    int64
 	TokenCache string
-	AGWCLI     string
 	HTTPClient *http.Client
 }
 
@@ -34,35 +31,19 @@ func parseGlobalFlags(args []string) (config, []string, error) {
 	}
 
 	cfg := config{
-		BaseURL:    envOrDefault("WECOM_BASE_URL", defaultBaseURL),
 		CorpID:     strings.TrimSpace(os.Getenv("WECOM_CORP_ID")),
 		CorpSecret: strings.TrimSpace(os.Getenv("WECOM_CORP_SECRET")),
 		TokenCache: strings.TrimSpace(os.Getenv("WECOM_TOKEN_CACHE")),
-		AGWCLI:     strings.TrimSpace(os.Getenv("AGW_CLI")),
 		HTTPClient: &http.Client{Timeout: defaultHTTPTimeout},
-	}
-	if agentID := strings.TrimSpace(os.Getenv("WECOM_AGENT_ID")); agentID != "" {
-		parsed, err := strconv.ParseInt(agentID, 10, 64)
-		if err != nil {
-			return cfg, nil, fmt.Errorf("parse WECOM_AGENT_ID: %w", err)
-		}
-		cfg.AgentID = parsed
 	}
 
 	fs := flag.NewFlagSet("wecom-cli", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	fs.StringVar(&cfg.BaseURL, "base-url", cfg.BaseURL, "WeCom API base URL")
 	fs.StringVar(&cfg.CorpID, "corpid", cfg.CorpID, "WeCom enterprise ID")
 	fs.StringVar(&cfg.CorpSecret, "corpsecret", cfg.CorpSecret, "WeCom app secret")
-	fs.Int64Var(&cfg.AgentID, "agent-id", cfg.AgentID, "WeCom agent ID")
 	fs.StringVar(&cfg.TokenCache, "token-cache", cfg.TokenCache, "access_token cache file")
-	fs.StringVar(&cfg.AGWCLI, "agw-cli", cfg.AGWCLI, "agw-cli path for name lookups")
 	if err := fs.Parse(args); err != nil {
 		return cfg, nil, err
-	}
-	cfg.BaseURL = strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
-	if cfg.BaseURL == "" {
-		cfg.BaseURL = defaultBaseURL
 	}
 	if cfg.TokenCache == "" {
 		cfg.TokenCache = filepath.Join(homeDir(), ".wecom-cli", "access_tokens.json")

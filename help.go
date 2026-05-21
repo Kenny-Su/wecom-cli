@@ -9,12 +9,9 @@ Usage:
   wecom-cli [global flags] <command> <subcommand> [flags]
 
 Global flags:
-  --base-url      WeCom API base URL. Defaults to https://qyapi.weixin.qq.com
   --corpid        WeCom enterprise ID. Defaults to WECOM_CORP_ID
   --corpsecret    WeCom app secret. Defaults to WECOM_CORP_SECRET
-  --agent-id      WeCom agent ID. Defaults to WECOM_AGENT_ID
   --token-cache   access_token cache file. Defaults to ~/.wecom-cli/access_tokens.json
-  --agw-cli       agw-cli path for employee-name lookups. Defaults to AGW_CLI
 
 Commands:
   calendar   Create and manage calendars
@@ -38,15 +35,13 @@ Create flags:
   --color               RGB color such as #2F7DFF. Required unless --corp-calendar
   --description         Calendar description
   --admin               Calendar admin userid. Repeatable
-  --admin-name          Admin employee name to resolve through agw-cli. Repeatable
   --share               userid[:permission]. Repeatable. permission: 1=view, 3=free/busy
-  --share-name          employee-name[:permission]. Repeatable
   --default             Set as app default calendar
   --public              Create public calendar
   --public-user         Public-range userid. Repeatable
-  --public-user-name    Public-range employee name. Repeatable
   --public-party        Public-range department ID. Repeatable
   --corp-calendar       Create all-staff calendar
+  --agentid             Authorized app agentid
   --dry-run             Print request JSON without calling WeCom
 
 Update flags:
@@ -55,11 +50,8 @@ Update flags:
   --color               RGB color such as #2F7DFF. Required
   --description         Calendar description
   --admin               Calendar admin userid. Repeatable
-  --admin-name          Admin employee name to resolve through agw-cli. Repeatable
   --share               userid[:permission]. Repeatable. permission: 1=view, 3=free/busy
-  --share-name          employee-name[:permission]. Repeatable
   --public-user         Public-range userid. Repeatable
-  --public-user-name    Public-range employee name. Repeatable
   --public-party        Public-range department ID. Repeatable
   --skip-public-range   Do not update public subscription range
   --dry-run             Print request JSON without calling WeCom
@@ -89,14 +81,13 @@ Create/update flags:
   --end                   End time. Unix seconds or RFC3339. Required
   --cal-id                Calendar ID. Create only
   --schedule-id           Schedule ID. Update only
+  --agentid               Authorized app agentid. Create only
   --summary               Schedule title
   --description           Schedule description
   --location              Schedule location
   --whole-day             Mark as whole-day schedule
   --admin                 Admin userid. Repeatable
-  --admin-name            Admin employee name to resolve through agw-cli. Repeatable
   --attendee              Attendee userid. Repeatable
-  --attendee-name         Attendee employee name to resolve through agw-cli. Repeatable
   --remind                Enable reminder
   --remind-before         Seconds before event reminder
   --remind-time-diff      Reminder diff from start time. Repeatable
@@ -119,7 +110,6 @@ Get/list/delete/attendee flags:
   --offset                List pagination offset
   --limit                 List pagination limit, 1-1000
   --attendee              Attendee userid. Repeatable
-  --attendee-name         Attendee employee name to resolve through agw-cli. Repeatable
   --op-mode               Delete repeat operation mode. 0 all, 1 current, 2 future
   --op-start-time         Delete repeat occurrence start time for op-mode 1 or 2
   --dry-run               Print request JSON without calling WeCom
@@ -136,16 +126,15 @@ func printMeetingUsage() {
 
 Create/update flags:
   --meeting-id             Meeting ID. Update/get/cancel only
-  --admin-userid           Meeting admin userid. Create required unless --admin-name
-  --admin-name             Meeting admin employee name to resolve through agw-cli
+  --admin-userid           Meeting admin userid. Create required
   --title                  Meeting title. Create required
   --start                  Meeting start time. Unix seconds or RFC3339
   --duration               Meeting duration in seconds, 300-86399
   --description            Meeting description
   --location               Meeting location
+  --agentid                Authorized app agentid
   --cal-id                 Calendar ID
   --invitee                Invitee userid. Repeatable
-  --invitee-name           Invitee employee name to resolve through agw-cli. Repeatable
   --remind-scope           1 none, 2 hosts, 3 all, 4 ring-users
   --password               Meeting password, 4-6 digits
   --waiting-room           true or false
@@ -153,9 +142,7 @@ Create/update flags:
   --enter-mute             0 off, 1 on, 2 auto
   --screen-watermark       true or false
   --host                   Host userid. Repeatable
-  --host-name              Host employee name to resolve through agw-cli. Repeatable
   --ring-user              Ring userid. Repeatable
-  --ring-user-name         Ring employee name to resolve through agw-cli. Repeatable
   --repeat                 Enable repeat meeting
   --repeat-type            0 daily, 1 weekly, 2 monthly, 7 workday
   --repeat-until           Repeat end time. Unix seconds or RFC3339
@@ -165,7 +152,6 @@ Create/update flags:
 
 List flags:
   --userid                 Member userid
-  --user-name              Employee name to resolve through agw-cli
   --begin                  Begin time. Unix seconds or RFC3339
   --end                    End time. Unix seconds or RFC3339
   --cursor                 Pagination cursor

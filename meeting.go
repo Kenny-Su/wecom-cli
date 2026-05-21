@@ -63,15 +63,14 @@ type meetingReminders struct {
 type meetingInput struct {
 	MeetingID             string
 	AdminUserID           string
-	AdminName             string
 	Title                 string
 	MeetingStart          string
 	MeetingDuration       int
 	Description           string
 	Location              string
+	AgentID               int64
 	CalID                 string
 	Invitees              []string
-	InviteeNames          []string
 	RemindScope           int
 	Password              string
 	EnableWaitingRoom     string
@@ -79,9 +78,7 @@ type meetingInput struct {
 	EnableEnterMute       int
 	EnableScreenWatermark string
 	Hosts                 []string
-	HostNames             []string
 	RingUsers             []string
-	RingUserNames         []string
 	Repeat                bool
 	RepeatType            int
 	RepeatUntil           string
@@ -207,7 +204,6 @@ func meetingList(c *wecomClient, args []string) error {
 	fs := flag.NewFlagSet("meeting list", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	userID := fs.String("userid", "", "member userid")
-	userName := fs.String("user-name", "", "employee name to resolve through agw-cli")
 	cursor := fs.String("cursor", "", "pagination cursor")
 	begin := fs.String("begin", "", "begin time, Unix seconds or RFC3339")
 	end := fs.String("end", "", "end time, Unix seconds or RFC3339")
@@ -219,7 +215,7 @@ func meetingList(c *wecomClient, args []string) error {
 	if fs.NArg() > 0 {
 		return fmt.Errorf("unexpected argument %q", fs.Arg(0))
 	}
-	req, err := buildMeetingListRequest(c.cfg, *userID, *userName, *cursor, *begin, *end, *limit)
+	req, err := buildMeetingListRequest(*userID, *cursor, *begin, *end, *limit)
 	if err != nil {
 		return err
 	}
@@ -238,15 +234,14 @@ func bindMeetingFlags(fs *flag.FlagSet, includeID bool) (*meetingInput, *bool) {
 		fs.StringVar(&input.MeetingID, "meeting-id", "", "meeting ID")
 	}
 	fs.StringVar(&input.AdminUserID, "admin-userid", "", "meeting admin userid")
-	fs.StringVar(&input.AdminName, "admin-name", "", "meeting admin name to resolve through agw-cli")
 	fs.StringVar(&input.Title, "title", "", "meeting title")
 	fs.StringVar(&input.MeetingStart, "start", "", "meeting start time, Unix seconds or RFC3339")
 	fs.IntVar(&input.MeetingDuration, "duration", 0, "meeting duration in seconds")
 	fs.StringVar(&input.Description, "description", "", "meeting description")
 	fs.StringVar(&input.Location, "location", "", "meeting location")
+	fs.Int64Var(&input.AgentID, "agentid", 0, "authorized app agentid")
 	fs.StringVar(&input.CalID, "cal-id", "", "calendar ID")
 	fs.Var((*stringList)(&input.Invitees), "invitee", "invitee userid; repeatable")
-	fs.Var((*stringList)(&input.InviteeNames), "invitee-name", "invitee employee name; repeatable")
 	fs.IntVar(&input.RemindScope, "remind-scope", 0, "1 none, 2 hosts, 3 all, 4 ring-users")
 	fs.StringVar(&input.Password, "password", "", "meeting password, 4-6 digits")
 	fs.StringVar(&input.EnableWaitingRoom, "waiting-room", "", "true or false")
@@ -254,9 +249,7 @@ func bindMeetingFlags(fs *flag.FlagSet, includeID bool) (*meetingInput, *bool) {
 	fs.IntVar(&input.EnableEnterMute, "enter-mute", -1, "0 off, 1 on, 2 auto")
 	fs.StringVar(&input.EnableScreenWatermark, "screen-watermark", "", "true or false")
 	fs.Var((*stringList)(&input.Hosts), "host", "host userid; repeatable")
-	fs.Var((*stringList)(&input.HostNames), "host-name", "host employee name; repeatable")
 	fs.Var((*stringList)(&input.RingUsers), "ring-user", "ring userid; repeatable")
-	fs.Var((*stringList)(&input.RingUserNames), "ring-user-name", "ring employee name; repeatable")
 	fs.BoolVar(&input.Repeat, "repeat", false, "enable repeat meeting")
 	fs.IntVar(&input.RepeatType, "repeat-type", -1, "0 daily, 1 weekly, 2 monthly, 7 workday")
 	fs.StringVar(&input.RepeatUntil, "repeat-until", "", "repeat end time, Unix seconds or RFC3339")
@@ -267,8 +260,8 @@ func bindMeetingFlags(fs *flag.FlagSet, includeID bool) (*meetingInput, *bool) {
 }
 
 func buildMeetingCreateRequest(cfg config, input meetingInput) (meetingPayload, error) {
-	if strings.TrimSpace(input.AdminUserID) == "" && strings.TrimSpace(input.AdminName) == "" {
-		return meetingPayload{}, errors.New("--admin-userid or --admin-name is required")
+	if strings.TrimSpace(input.AdminUserID) == "" {
+		return meetingPayload{}, errors.New("--admin-userid is required")
 	}
 	if strings.TrimSpace(input.Title) == "" {
 		return meetingPayload{}, errors.New("--title is required")
@@ -280,7 +273,6 @@ func buildMeetingCreateRequest(cfg config, input meetingInput) (meetingPayload, 
 	if err != nil {
 		return meetingPayload{}, err
 	}
-	payload.AgentID = cfg.AgentID
 	return payload, nil
 }
 
@@ -296,13 +288,6 @@ func buildMeetingUpdateRequest(cfg config, input meetingInput) (meetingPayload, 
 
 func buildMeetingPayload(cfg config, input meetingInput, update bool) (meetingPayload, error) {
 	adminUserID := strings.TrimSpace(input.AdminUserID)
-	if adminUserID == "" && strings.TrimSpace(input.AdminName) != "" {
-		resolved, err := resolveUserName(cfg, input.AdminName)
-		if err != nil {
-			return meetingPayload{}, err
-		}
-		adminUserID = resolved
-	}
 	title := strings.TrimSpace(input.Title)
 	if title != "" && (len([]byte(title)) > 40 || len([]rune(title)) > 20) {
 		return meetingPayload{}, errors.New("--title must be at most 40 bytes or 20 UTF-8 characters")
@@ -325,11 +310,11 @@ func buildMeetingPayload(cfg config, input meetingInput, update bool) (meetingPa
 	if input.MeetingDuration != 0 && (input.MeetingDuration < 300 || input.MeetingDuration > 86399) {
 		return meetingPayload{}, errors.New("--duration must be between 300 and 86399 seconds")
 	}
-	invitees, err := buildMeetingUserList(cfg, input.Invitees, input.InviteeNames)
+	invitees, err := buildMeetingUserList(input.Invitees)
 	if err != nil {
 		return meetingPayload{}, err
 	}
-	settings, err := buildMeetingSettings(cfg, input)
+	settings, err := buildMeetingSettings(input)
 	if err != nil {
 		return meetingPayload{}, err
 	}
@@ -345,6 +330,7 @@ func buildMeetingPayload(cfg config, input meetingInput, update bool) (meetingPa
 		MeetingDuration: input.MeetingDuration,
 		Description:     description,
 		Location:        location,
+		AgentID:         input.AgentID,
 		Invitees:        invitees,
 		Settings:        settings,
 		CalID:           strings.TrimSpace(input.CalID),
@@ -353,12 +339,12 @@ func buildMeetingPayload(cfg config, input meetingInput, update bool) (meetingPa
 	return payload, nil
 }
 
-func buildMeetingSettings(cfg config, input meetingInput) (*meetingSettings, error) {
-	hosts, err := buildMeetingUserList(cfg, input.Hosts, input.HostNames)
+func buildMeetingSettings(input meetingInput) (*meetingSettings, error) {
+	hosts, err := buildMeetingUserList(input.Hosts)
 	if err != nil {
 		return nil, err
 	}
-	ringUsers, err := buildMeetingUserList(cfg, input.RingUsers, input.RingUserNames)
+	ringUsers, err := buildMeetingUserList(input.RingUsers)
 	if err != nil {
 		return nil, err
 	}
@@ -432,12 +418,11 @@ func buildMeetingReminders(input meetingInput) (*meetingReminders, error) {
 	return reminders, nil
 }
 
-func buildMeetingUserList(cfg config, userIDs []string, names []string) (*meetingUserList, error) {
-	resolved, err := resolveUsers(cfg, userIDs, names)
+func buildMeetingUserList(userIDs []string) (*meetingUserList, error) {
+	resolved, err := parseUserIDs(userIDs)
 	if err != nil {
 		return nil, err
 	}
-	resolved = uniqueStrings(resolved)
 	if len(resolved) == 0 {
 		return nil, nil
 	}
@@ -455,17 +440,10 @@ func buildMeetingIDRequest(meetingID string) (meetingIDRequest, error) {
 	return meetingIDRequest{MeetingID: meetingID}, nil
 }
 
-func buildMeetingListRequest(cfg config, userID string, userName string, cursor string, begin string, end string, limit int) (meetingUserMeetingIDRequest, error) {
+func buildMeetingListRequest(userID string, cursor string, begin string, end string, limit int) (meetingUserMeetingIDRequest, error) {
 	userID = strings.TrimSpace(userID)
-	if userID == "" && strings.TrimSpace(userName) != "" {
-		resolved, err := resolveUserName(cfg, userName)
-		if err != nil {
-			return meetingUserMeetingIDRequest{}, err
-		}
-		userID = resolved
-	}
 	if userID == "" {
-		return meetingUserMeetingIDRequest{}, errors.New("--userid or --user-name is required")
+		return meetingUserMeetingIDRequest{}, errors.New("--userid is required")
 	}
 	if limit <= 0 || limit > 100 {
 		return meetingUserMeetingIDRequest{}, errors.New("--limit must be between 1 and 100")

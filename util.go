@@ -79,6 +79,14 @@ func uniqueStrings(values []string) []string {
 	return out
 }
 
+func parseUserIDs(userIDs []string) ([]string, error) {
+	users := uniqueStrings(userIDs)
+	if len(users) > 1000 {
+		return nil, fmt.Errorf("user list can include at most 1000 users")
+	}
+	return users, nil
+}
+
 func uniqueShares(values []calendarShare) []calendarShare {
 	seen := map[string]bool{}
 	var out []calendarShare

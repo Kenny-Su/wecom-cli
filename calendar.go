@@ -55,19 +55,17 @@ type publicRange struct {
 }
 
 type calendarCreateInput struct {
-	Summary         string
-	Color           string
-	Description     string
-	SetAsDefault    bool
-	IsPublic        bool
-	IsCorpCalendar  bool
-	Admins          []string
-	AdminNames      []string
-	Shares          []string
-	ShareNames      []string
-	PublicUsers     []string
-	PublicUserNames []string
-	PublicParties   []string
+	Summary        string
+	Color          string
+	Description    string
+	SetAsDefault   bool
+	IsPublic       bool
+	IsCorpCalendar bool
+	Admins         []string
+	Shares         []string
+	PublicUsers    []string
+	PublicParties  []string
+	AgentID        int64
 }
 
 type calendarUpdateInput struct {
@@ -77,11 +75,8 @@ type calendarUpdateInput struct {
 	Description     string
 	SkipPublicRange bool
 	Admins          []string
-	AdminNames      []string
 	Shares          []string
-	ShareNames      []string
 	PublicUsers     []string
-	PublicUserNames []string
 	PublicParties   []string
 }
 
@@ -106,20 +101,18 @@ func runCalendar(c *wecomClient, args []string) error {
 func calendarCreate(c *wecomClient, args []string) error {
 	fs := flag.NewFlagSet("calendar create", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	var admins, adminNames, shares, shareNames, publicUsers, publicUserNames, publicParties stringList
+	var admins, shares, publicUsers, publicParties stringList
 	summary := fs.String("summary", "", "calendar title")
 	color := fs.String("color", "", "calendar RGB color")
 	description := fs.String("description", "", "calendar description")
 	setDefault := fs.Bool("default", false, "set as app default calendar")
 	isPublic := fs.Bool("public", false, "create public calendar")
 	isCorp := fs.Bool("corp-calendar", false, "create all-staff calendar")
+	agentID := fs.Int64("agentid", 0, "authorized app agentid")
 	dryRun := fs.Bool("dry-run", false, "print request JSON without calling WeCom")
 	fs.Var(&admins, "admin", "admin userid; repeatable")
-	fs.Var(&adminNames, "admin-name", "admin employee name to resolve through agw-cli; repeatable")
 	fs.Var(&shares, "share", "userid[:permission]; repeatable")
-	fs.Var(&shareNames, "share-name", "employee-name[:permission]; repeatable")
 	fs.Var(&publicUsers, "public-user", "public-range userid; repeatable")
-	fs.Var(&publicUserNames, "public-user-name", "public-range employee name; repeatable")
 	fs.Var(&publicParties, "public-party", "public-range department ID; repeatable")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -128,20 +121,18 @@ func calendarCreate(c *wecomClient, args []string) error {
 		return fmt.Errorf("unexpected argument %q", fs.Arg(0))
 	}
 
-	req, err := buildCalendarCreateRequest(c.cfg, calendarCreateInput{
-		Summary:         *summary,
-		Color:           *color,
-		Description:     *description,
-		SetAsDefault:    *setDefault,
-		IsPublic:        *isPublic,
-		IsCorpCalendar:  *isCorp,
-		Admins:          admins,
-		AdminNames:      adminNames,
-		Shares:          shares,
-		ShareNames:      shareNames,
-		PublicUsers:     publicUsers,
-		PublicUserNames: publicUserNames,
-		PublicParties:   publicParties,
+	req, err := buildCalendarCreateRequest(calendarCreateInput{
+		Summary:        *summary,
+		Color:          *color,
+		Description:    *description,
+		SetAsDefault:   *setDefault,
+		IsPublic:       *isPublic,
+		IsCorpCalendar: *isCorp,
+		Admins:         admins,
+		Shares:         shares,
+		PublicUsers:    publicUsers,
+		PublicParties:  publicParties,
+		AgentID:        *agentID,
 	})
 	if err != nil {
 		return err
@@ -158,7 +149,7 @@ func calendarCreate(c *wecomClient, args []string) error {
 func calendarUpdate(c *wecomClient, args []string) error {
 	fs := flag.NewFlagSet("calendar update", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	var admins, adminNames, shares, shareNames, publicUsers, publicUserNames, publicParties stringList
+	var admins, shares, publicUsers, publicParties stringList
 	calID := fs.String("cal-id", "", "calendar ID")
 	summary := fs.String("summary", "", "calendar title")
 	color := fs.String("color", "", "calendar RGB color")
@@ -166,11 +157,8 @@ func calendarUpdate(c *wecomClient, args []string) error {
 	skipPublicRange := fs.Bool("skip-public-range", false, "do not update public subscription range")
 	dryRun := fs.Bool("dry-run", false, "print request JSON without calling WeCom")
 	fs.Var(&admins, "admin", "admin userid; repeatable")
-	fs.Var(&adminNames, "admin-name", "admin employee name to resolve through agw-cli; repeatable")
 	fs.Var(&shares, "share", "userid[:permission]; repeatable")
-	fs.Var(&shareNames, "share-name", "employee-name[:permission]; repeatable")
 	fs.Var(&publicUsers, "public-user", "public-range userid; repeatable")
-	fs.Var(&publicUserNames, "public-user-name", "public-range employee name; repeatable")
 	fs.Var(&publicParties, "public-party", "public-range department ID; repeatable")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -179,18 +167,15 @@ func calendarUpdate(c *wecomClient, args []string) error {
 		return fmt.Errorf("unexpected argument %q", fs.Arg(0))
 	}
 
-	req, err := buildCalendarUpdateRequest(c.cfg, calendarUpdateInput{
+	req, err := buildCalendarUpdateRequest(calendarUpdateInput{
 		CalID:           *calID,
 		Summary:         *summary,
 		Color:           *color,
 		Description:     *description,
 		SkipPublicRange: *skipPublicRange,
 		Admins:          admins,
-		AdminNames:      adminNames,
 		Shares:          shares,
-		ShareNames:      shareNames,
 		PublicUsers:     publicUsers,
-		PublicUserNames: publicUserNames,
 		PublicParties:   publicParties,
 	})
 	if err != nil {
@@ -256,7 +241,7 @@ func calendarDelete(c *wecomClient, args []string) error {
 	return c.deleteCalendar(req)
 }
 
-func buildCalendarCreateRequest(cfg config, input calendarCreateInput) (calendarAddRequest, error) {
+func buildCalendarCreateRequest(input calendarCreateInput) (calendarAddRequest, error) {
 	summary, err := validateCalendarSummary(input.Summary)
 	if err != nil {
 		return calendarAddRequest{}, err
@@ -281,18 +266,18 @@ func buildCalendarCreateRequest(cfg config, input calendarCreateInput) (calendar
 		return calendarAddRequest{}, errors.New("--corp-calendar cannot be combined with --default")
 	}
 
-	adminIDs, err := resolveUsers(cfg, input.Admins, input.AdminNames)
+	adminIDs, err := parseUserIDs(input.Admins)
 	if err != nil {
 		return calendarAddRequest{}, err
 	}
 	if len(adminIDs) > 3 {
 		return calendarAddRequest{}, errors.New("calendar admins can include at most 3 users")
 	}
-	shareIDs, err := parseShares(cfg, input.Shares, input.ShareNames)
+	shareIDs, err := parseShares(input.Shares)
 	if err != nil {
 		return calendarAddRequest{}, err
 	}
-	publicUserIDs, err := resolveUsers(cfg, input.PublicUsers, input.PublicUserNames)
+	publicUserIDs, err := parseUserIDs(input.PublicUsers)
 	if err != nil {
 		return calendarAddRequest{}, err
 	}
@@ -304,7 +289,7 @@ func buildCalendarCreateRequest(cfg config, input calendarCreateInput) (calendar
 		input.IsPublic = true
 	}
 	if input.IsCorpCalendar && len(publicUserIDs) == 0 && len(partyIDs) == 0 {
-		return calendarAddRequest{}, errors.New("--corp-calendar requires --public-user, --public-user-name, or --public-party")
+		return calendarAddRequest{}, errors.New("--corp-calendar requires --public-user or --public-party")
 	}
 	if !input.IsPublic && (len(publicUserIDs) > 0 || len(partyIDs) > 0) {
 		return calendarAddRequest{}, errors.New("--public is required when public range flags are used")
@@ -330,10 +315,10 @@ func buildCalendarCreateRequest(cfg config, input calendarCreateInput) (calendar
 	if input.IsCorpCalendar {
 		payload.IsCorpCalendar = 1
 	}
-	return calendarAddRequest{Calendar: payload, AgentID: cfg.AgentID}, nil
+	return calendarAddRequest{Calendar: payload, AgentID: input.AgentID}, nil
 }
 
-func buildCalendarUpdateRequest(cfg config, input calendarUpdateInput) (calendarUpdateRequest, error) {
+func buildCalendarUpdateRequest(input calendarUpdateInput) (calendarUpdateRequest, error) {
 	calID := strings.TrimSpace(input.CalID)
 	if calID == "" {
 		return calendarUpdateRequest{}, errors.New("--cal-id is required")
@@ -351,18 +336,18 @@ func buildCalendarUpdateRequest(cfg config, input calendarUpdateInput) (calendar
 		return calendarUpdateRequest{}, err
 	}
 
-	adminIDs, err := resolveUsers(cfg, input.Admins, input.AdminNames)
+	adminIDs, err := parseUserIDs(input.Admins)
 	if err != nil {
 		return calendarUpdateRequest{}, err
 	}
 	if len(adminIDs) > 3 {
 		return calendarUpdateRequest{}, errors.New("calendar admins can include at most 3 users")
 	}
-	shareIDs, err := parseShares(cfg, input.Shares, input.ShareNames)
+	shareIDs, err := parseShares(input.Shares)
 	if err != nil {
 		return calendarUpdateRequest{}, err
 	}
-	publicUserIDs, err := resolveUsers(cfg, input.PublicUsers, input.PublicUserNames)
+	publicUserIDs, err := parseUserIDs(input.PublicUsers)
 	if err != nil {
 		return calendarUpdateRequest{}, err
 	}
@@ -444,21 +429,10 @@ func validateCalendarColor(value string) (string, error) {
 	return strings.ToUpper(color), nil
 }
 
-func parseShares(cfg config, rawShares []string, rawNameShares []string) ([]calendarShare, error) {
+func parseShares(rawShares []string) ([]calendarShare, error) {
 	var shares []calendarShare
 	for _, raw := range rawShares {
 		userID, permission, err := parseShareSpec(raw)
-		if err != nil {
-			return nil, err
-		}
-		shares = append(shares, calendarShare{UserID: userID, Permission: permission})
-	}
-	for _, raw := range rawNameShares {
-		name, permission, err := parseShareSpec(raw)
-		if err != nil {
-			return nil, err
-		}
-		userID, err := resolveUserName(cfg, name)
 		if err != nil {
 			return nil, err
 		}
@@ -478,7 +452,7 @@ func parseShareSpec(raw string) (string, int, error) {
 	userID, permissionText, found := strings.Cut(value, ":")
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
-		return "", 0, fmt.Errorf("invalid share %q: missing userid or name", raw)
+		return "", 0, fmt.Errorf("invalid share %q: missing userid", raw)
 	}
 	if !found || strings.TrimSpace(permissionText) == "" {
 		return userID, 1, nil
