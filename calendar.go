@@ -489,7 +489,13 @@ func (c *wecomClient) addCalendar(req calendarAddRequest) error {
 		return err
 	}
 	path := "/cgi-bin/oa/calendar/add?access_token=" + url.QueryEscape(token)
-	return c.postWeCom(path, req)
+	return c.postWeComAndTrack(path, req, resourceTrackSpec{
+		Type:     "calendar",
+		IDFields: []string{"cal_id"},
+		Name:     req.Calendar.Summary,
+		Command:  "calendar create",
+		Request:  req,
+	})
 }
 
 func (c *wecomClient) updateCalendar(req calendarUpdateRequest) error {

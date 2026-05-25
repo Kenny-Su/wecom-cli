@@ -601,7 +601,13 @@ func (c *wecomClient) addSchedule(req scheduleRequest) error {
 		return err
 	}
 	path := "/cgi-bin/oa/schedule/add?access_token=" + url.QueryEscape(token)
-	return c.postWeCom(path, req)
+	return c.postWeComAndTrack(path, req, resourceTrackSpec{
+		Type:     "schedule",
+		IDFields: []string{"schedule_id"},
+		Name:     req.Schedule.Summary,
+		Command:  "schedule create",
+		Request:  req,
+	})
 }
 
 func (c *wecomClient) updateSchedule(req scheduleUpdateRequest) error {

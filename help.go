@@ -12,14 +12,26 @@ Global flags:
   --corpid        WeCom enterprise ID. Defaults to WECOM_CORP_ID
   --corpsecret    WeCom app secret. Defaults to WECOM_CORP_SECRET
   --token-cache   access_token cache file. Defaults to ~/.wecom-cli/access_tokens.json
+  --resource-table created resource table file. Defaults to ~/.wecom-cli/resources.json
 
 Commands:
+  resources  List resources created by this CLI
   calendar   Create and manage calendars
   schedule   Create and manage schedules
   meeting    Create and manage reserved meetings
   wedrive    Manage WeDrive spaces
 
 Run "<command> help" for command-specific details.
+`)
+}
+
+func printResourcesUsage() {
+	fmt.Print(`Resource table commands:
+  wecom-cli resources list [--type TYPE] [--json]
+  wecom-cli resources path
+
+The table is updated after successful create calls. Defaults to ~/.wecom-cli/resources.json.
+Use --resource-table or WECOM_RESOURCE_TABLE to override the path.
 `)
 }
 

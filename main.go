@@ -23,6 +23,8 @@ func run(args []string) error {
 	}
 
 	switch rest[0] {
+	case "resources":
+		return runResources(cfg, rest[1:])
 	case "calendar":
 		if len(rest) == 1 || isHelp(rest[1]) {
 			printCalendarUsage()

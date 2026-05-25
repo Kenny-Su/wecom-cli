@@ -93,32 +93,62 @@ func (c *wecomClient) accessToken() (string, error) {
 }
 
 func (c *wecomClient) postWeCom(path string, body any) error {
+	raw, err := c.postWeComRaw(path, body)
+	if err != nil {
+		return err
+	}
+	return printRawResponse(raw)
+}
+
+func (c *wecomClient) postWeComAndTrack(path string, body any, spec resourceTrackSpec) error {
+	raw, err := c.postWeComRaw(path, body)
+	if err != nil {
+		return err
+	}
+	response := map[string]any{}
+	if len(bytes.TrimSpace(raw)) > 0 && json.Valid(raw) {
+		_ = json.Unmarshal(raw, &response)
+	}
+	if err := printRawResponse(raw); err != nil {
+		return err
+	}
+	if err := trackCreatedResource(c, spec, response); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *wecomClient) postWeComRaw(path string, body any) ([]byte, error) {
 	rawBody, err := json.Marshal(body)
 	if err != nil {
-		return fmt.Errorf("marshal request body: %w", err)
+		return nil, fmt.Errorf("marshal request body: %w", err)
 	}
 	req, err := http.NewRequest(http.MethodPost, defaultBaseURL+path, bytes.NewReader(rawBody))
 	if err != nil {
-		return fmt.Errorf("build request: %w", err)
+		return nil, fmt.Errorf("build request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return fmt.Errorf("send request: %w", err)
+		return nil, fmt.Errorf("send request: %w", err)
 	}
 	defer resp.Body.Close()
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("read response: %w", err)
+		return nil, fmt.Errorf("read response: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("POST %s returned HTTP %d: %s", path, resp.StatusCode, strings.TrimSpace(string(raw)))
+		return nil, fmt.Errorf("POST %s returned HTTP %d: %s", path, resp.StatusCode, strings.TrimSpace(string(raw)))
 	}
 	var apiErr apiErrorResponse
 	if json.Unmarshal(raw, &apiErr) == nil && apiErr.ErrCode != 0 {
-		return fmt.Errorf("WeCom returned errcode %d: %s", apiErr.ErrCode, apiErr.ErrMsg)
+		return nil, fmt.Errorf("WeCom returned errcode %d: %s", apiErr.ErrCode, apiErr.ErrMsg)
 	}
+	return raw, nil
+}
+
+func printRawResponse(raw []byte) error {
 	if len(bytes.TrimSpace(raw)) == 0 {
 		fmt.Println("{}")
 		return nil

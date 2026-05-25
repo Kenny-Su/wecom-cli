@@ -508,7 +508,13 @@ func (c *wecomClient) createMeeting(req meetingPayload) error {
 		return err
 	}
 	path := "/cgi-bin/meeting/create?access_token=" + url.QueryEscape(token)
-	return c.postWeCom(path, req)
+	return c.postWeComAndTrack(path, req, resourceTrackSpec{
+		Type:     "meeting",
+		IDFields: []string{"meetingid", "meeting_id"},
+		Name:     req.Title,
+		Command:  "meeting create",
+		Request:  req,
+	})
 }
 
 func (c *wecomClient) updateMeeting(req meetingPayload) error {

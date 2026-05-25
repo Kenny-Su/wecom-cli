@@ -433,8 +433,26 @@ func (c *wecomClient) postWeDrive(path string, req any) error {
 	return c.postWeCom(path+"?access_token="+url.QueryEscape(token), req)
 }
 
+func (c *wecomClient) postWeDriveAndTrack(path string, req any, spec resourceTrackSpec) error {
+	token, err := c.accessToken()
+	if err != nil {
+		return err
+	}
+	return c.postWeComAndTrack(path+"?access_token="+url.QueryEscape(token), req, spec)
+}
+
 func (c *wecomClient) createWeDriveSpace(req any) error {
-	return c.postWeDrive("/cgi-bin/wedrive/space_create", req)
+	name := ""
+	if typed, ok := req.(weDriveSpaceCreateRequest); ok {
+		name = typed.SpaceName
+	}
+	return c.postWeDriveAndTrack("/cgi-bin/wedrive/space_create", req, resourceTrackSpec{
+		Type:     "wedrive_space",
+		IDFields: []string{"spaceid", "space_id"},
+		Name:     name,
+		Command:  "wedrive space create",
+		Request:  req,
+	})
 }
 
 func (c *wecomClient) getWeDriveSpaceInfo(req any) error {

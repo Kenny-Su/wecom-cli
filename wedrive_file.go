@@ -747,6 +747,16 @@ func (c *wecomClient) uploadWeDriveFileInChunks(req weDriveFileUploadInitRequest
 		return err
 	}
 	if initResp.HitExist {
+		response := mapFromAny(initResp)
+		if err := trackCreatedResource(c, resourceTrackSpec{
+			Type:     "wedrive_file",
+			IDFields: []string{"fileid", "file_id"},
+			Name:     req.FileName,
+			Command:  "wedrive file upload-chunk",
+			Request:  req,
+		}, response); err != nil {
+			return err
+		}
 		return printPrettyJSON(initResp)
 	}
 	if initResp.UploadKey == "" {
@@ -781,40 +791,30 @@ func (c *wecomClient) uploadWeDriveFileInChunks(req weDriveFileUploadInitRequest
 		}
 	}
 	finishReq := weDriveFileUploadFinishRequest{UploadKey: initResp.UploadKey}
-	return c.postWeDriveJSON("/cgi-bin/wedrive/file_upload_finish", finishReq, nil)
-}
-
-func (c *wecomClient) postWeDriveJSON(path string, req any, out any) error {
-	token, err := c.accessToken()
+	raw, err := c.postWeDriveJSONRaw("/cgi-bin/wedrive/file_upload_finish", finishReq)
 	if err != nil {
 		return err
 	}
-	rawBody, err := json.Marshal(req)
+	response := map[string]any{}
+	if len(bytes.TrimSpace(raw)) > 0 && json.Valid(raw) {
+		_ = json.Unmarshal(raw, &response)
+	}
+	if err := printRawResponse(raw); err != nil {
+		return err
+	}
+	return trackCreatedResource(c, resourceTrackSpec{
+		Type:     "wedrive_file",
+		IDFields: []string{"fileid", "file_id"},
+		Name:     req.FileName,
+		Command:  "wedrive file upload-chunk",
+		Request:  req,
+	}, response)
+}
+
+func (c *wecomClient) postWeDriveJSON(path string, req any, out any) error {
+	raw, err := c.postWeDriveJSONRaw(path, req)
 	if err != nil {
-		return fmt.Errorf("marshal request body: %w", err)
-	}
-	u := defaultBaseURL + path + "?access_token=" + url.QueryEscape(token)
-	httpReq, err := http.NewRequest(http.MethodPost, u, bytes.NewReader(rawBody))
-	if err != nil {
-		return fmt.Errorf("build request: %w", err)
-	}
-	httpReq.Header.Set("Accept", "application/json")
-	httpReq.Header.Set("Content-Type", "application/json")
-	resp, err := c.http.Do(httpReq)
-	if err != nil {
-		return fmt.Errorf("send request: %w", err)
-	}
-	defer resp.Body.Close()
-	raw, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("read response: %w", err)
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("POST %s returned HTTP %d: %s", path, resp.StatusCode, strings.TrimSpace(string(raw)))
-	}
-	var apiErr apiErrorResponse
-	if json.Unmarshal(raw, &apiErr) == nil && apiErr.ErrCode != 0 {
-		return fmt.Errorf("WeCom returned errcode %d: %s", apiErr.ErrCode, apiErr.ErrMsg)
+		return err
 	}
 	if out != nil {
 		if err := json.Unmarshal(raw, out); err != nil {
@@ -822,17 +822,42 @@ func (c *wecomClient) postWeDriveJSON(path string, req any, out any) error {
 		}
 		return nil
 	}
-	if len(bytes.TrimSpace(raw)) == 0 {
-		fmt.Println("{}")
-		return nil
+	return printRawResponse(raw)
+}
+
+func (c *wecomClient) postWeDriveJSONRaw(path string, req any) ([]byte, error) {
+	token, err := c.accessToken()
+	if err != nil {
+		return nil, err
 	}
-	var formatted bytes.Buffer
-	if json.Valid(raw) && json.Indent(&formatted, raw, "", "  ") == nil {
-		fmt.Println(formatted.String())
-		return nil
+	rawBody, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("marshal request body: %w", err)
 	}
-	fmt.Println(string(raw))
-	return nil
+	u := defaultBaseURL + path + "?access_token=" + url.QueryEscape(token)
+	httpReq, err := http.NewRequest(http.MethodPost, u, bytes.NewReader(rawBody))
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	httpReq.Header.Set("Accept", "application/json")
+	httpReq.Header.Set("Content-Type", "application/json")
+	resp, err := c.http.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("send request: %w", err)
+	}
+	defer resp.Body.Close()
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("POST %s returned HTTP %d: %s", path, resp.StatusCode, strings.TrimSpace(string(raw)))
+	}
+	var apiErr apiErrorResponse
+	if json.Unmarshal(raw, &apiErr) == nil && apiErr.ErrCode != 0 {
+		return nil, fmt.Errorf("WeCom returned errcode %d: %s", apiErr.ErrCode, apiErr.ErrMsg)
+	}
+	return raw, nil
 }
 
 func (c *wecomClient) listWeDriveFiles(req any) error {
@@ -844,11 +869,31 @@ func (c *wecomClient) getWeDriveFileInfo(req any) error {
 }
 
 func (c *wecomClient) createWeDriveFile(req any) error {
-	return c.postWeDrive("/cgi-bin/wedrive/file_create", req)
+	name := ""
+	if typed, ok := req.(weDriveFileCreateRequest); ok {
+		name = typed.FileName
+	}
+	return c.postWeDriveAndTrack("/cgi-bin/wedrive/file_create", req, resourceTrackSpec{
+		Type:     "wedrive_file",
+		IDFields: []string{"fileid", "file_id"},
+		Name:     name,
+		Command:  "wedrive file create",
+		Request:  req,
+	})
 }
 
 func (c *wecomClient) uploadWeDriveFile(req any) error {
-	return c.postWeDrive("/cgi-bin/wedrive/file_upload", req)
+	name := ""
+	if typed, ok := req.(weDriveFileUploadRequest); ok {
+		name = typed.FileName
+	}
+	return c.postWeDriveAndTrack("/cgi-bin/wedrive/file_upload", req, resourceTrackSpec{
+		Type:     "wedrive_file",
+		IDFields: []string{"fileid", "file_id"},
+		Name:     name,
+		Command:  "wedrive file upload",
+		Request:  req,
+	})
 }
 
 func (c *wecomClient) downloadWeDriveFile(req any) error {
