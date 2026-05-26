@@ -21,6 +21,7 @@ const (
 type config struct {
 	CorpID        string
 	CorpSecret    string
+	BaseURL       string
 	TokenCache    string
 	ResourceTable string
 	HTTPClient    *http.Client
@@ -34,6 +35,7 @@ func parseGlobalFlags(args []string) (config, []string, error) {
 	cfg := config{
 		CorpID:        strings.TrimSpace(os.Getenv("WECOM_CORP_ID")),
 		CorpSecret:    strings.TrimSpace(os.Getenv("WECOM_CORP_SECRET")),
+		BaseURL:       strings.TrimSpace(os.Getenv("WECOM_BASE_URL")),
 		TokenCache:    strings.TrimSpace(os.Getenv("WECOM_TOKEN_CACHE")),
 		ResourceTable: strings.TrimSpace(os.Getenv("WECOM_RESOURCE_TABLE")),
 		HTTPClient:    &http.Client{Timeout: defaultHTTPTimeout},
@@ -43,11 +45,16 @@ func parseGlobalFlags(args []string) (config, []string, error) {
 	fs.SetOutput(io.Discard)
 	fs.StringVar(&cfg.CorpID, "corpid", cfg.CorpID, "WeCom enterprise ID")
 	fs.StringVar(&cfg.CorpSecret, "corpsecret", cfg.CorpSecret, "WeCom app secret")
+	fs.StringVar(&cfg.BaseURL, "base-url", cfg.BaseURL, "WeCom API base URL")
 	fs.StringVar(&cfg.TokenCache, "token-cache", cfg.TokenCache, "access_token cache file")
 	fs.StringVar(&cfg.ResourceTable, "resource-table", cfg.ResourceTable, "created resource table file")
 	if err := fs.Parse(args); err != nil {
 		return cfg, nil, err
 	}
+	if cfg.BaseURL == "" {
+		cfg.BaseURL = defaultBaseURL
+	}
+	cfg.BaseURL = strings.TrimRight(cfg.BaseURL, "/")
 	if cfg.TokenCache == "" {
 		cfg.TokenCache = filepath.Join(homeDir(), ".wecom-cli", "access_tokens.json")
 	}
@@ -99,12 +106,4 @@ func loadDotEnv(path string) error {
 		return fmt.Errorf("read %s: %w", path, err)
 	}
 	return nil
-}
-
-func envOrDefault(name, fallback string) string {
-	value := strings.TrimSpace(os.Getenv(name))
-	if value == "" {
-		return fallback
-	}
-	return value
 }

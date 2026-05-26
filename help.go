@@ -11,6 +11,7 @@ Usage:
 Global flags:
   --corpid        WeCom enterprise ID. Defaults to WECOM_CORP_ID
   --corpsecret    WeCom app secret. Defaults to WECOM_CORP_SECRET
+  --base-url      WeCom API base URL. Defaults to WECOM_BASE_URL or https://qyapi.weixin.qq.com
   --token-cache   access_token cache file. Defaults to ~/.wecom-cli/access_tokens.json
   --resource-table created resource table file. Defaults to ~/.wecom-cli/resources.json
 

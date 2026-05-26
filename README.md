@@ -23,9 +23,12 @@ WECOM_CORP_SECRET=your_app_secret
 Optional:
 
 ```env
+WECOM_BASE_URL=https://qyapi.weixin.qq.com
 WECOM_TOKEN_CACHE=~/.wecom-cli/access_tokens.json
 WECOM_RESOURCE_TABLE=~/.wecom-cli/resources.json
 ```
+
+`WECOM_BASE_URL` defaults to `https://qyapi.weixin.qq.com`.
 
 `WECOM_TOKEN_CACHE` defaults to `~/.wecom-cli/access_tokens.json`. Access tokens
 are cached per `corpid + secret` and refreshed before expiry.

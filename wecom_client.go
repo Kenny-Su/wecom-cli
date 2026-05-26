@@ -62,7 +62,7 @@ func (c *wecomClient) accessToken() (string, error) {
 	q := url.Values{}
 	q.Set("corpid", c.cfg.CorpID)
 	q.Set("corpsecret", c.cfg.CorpSecret)
-	req, err := http.NewRequest(http.MethodGet, defaultBaseURL+"/cgi-bin/gettoken?"+q.Encode(), nil)
+	req, err := http.NewRequest(http.MethodGet, c.cfg.BaseURL+"/cgi-bin/gettoken?"+q.Encode(), nil)
 	if err != nil {
 		return "", fmt.Errorf("build gettoken request: %w", err)
 	}
@@ -123,7 +123,7 @@ func (c *wecomClient) postWeComRaw(path string, body any) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("marshal request body: %w", err)
 	}
-	req, err := http.NewRequest(http.MethodPost, defaultBaseURL+path, bytes.NewReader(rawBody))
+	req, err := http.NewRequest(http.MethodPost, c.cfg.BaseURL+path, bytes.NewReader(rawBody))
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}
