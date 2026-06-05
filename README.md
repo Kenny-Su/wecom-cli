@@ -26,10 +26,10 @@ Required:
 ```env
 WECOM_GATEWAY_BASE_URL=https://gateway.example.com/wecom
 AGW_GATEWAY_BASE_URL=https://gateway.example.com
-CLI_IDENTITY_FILE=/path/to/cli-identity.env
 ```
 
-`CLI_IDENTITY_FILE` must point to a JSON file containing:
+The system environment variable `CLI_IDENTITY_FILE` must point to a JSON file
+containing:
 
 ```json
 {"ACCESS_TOKEN":"your_gateway_token"}
@@ -41,6 +41,8 @@ CLI_IDENTITY_FILE=/path/to/cli-identity.env
 `AGW_GATEWAY_BASE_URL` is used for resource storage and employee-WeCom mapping
 lookups. If it is not set, the CLI derives it from `WECOM_GATEWAY_BASE_URL` by
 removing a trailing `/wecom` path segment.
+
+`CLI_IDENTITY_FILE` is intentionally not loaded from `.env`.
 
 All gateway and AGW requests send:
 

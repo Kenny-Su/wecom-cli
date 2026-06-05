@@ -11,7 +11,6 @@ Usage:
 Global flags:
   --gateway-base-url WeCom relay gateway base URL. Defaults to WECOM_GATEWAY_BASE_URL
   --agw-base-url     AGW admin backend gateway base URL. Defaults to AGW_GATEWAY_BASE_URL or WECOM_AGW_BASE_URL
-  --identity-file    Path to JSON identity file containing ACCESS_TOKEN. Defaults to CLI_IDENTITY_FILE
 
 Commands:
   resources  Store and query AGW user-agent resources

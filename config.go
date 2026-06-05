@@ -39,7 +39,7 @@ func parseGlobalFlags(args []string) (config, []string, error) {
 	cfg := config{
 		GatewayBaseURL: strings.TrimSpace(os.Getenv("WECOM_GATEWAY_BASE_URL")),
 		AGWBaseURL:     firstNonBlank(os.Getenv("AGW_GATEWAY_BASE_URL"), os.Getenv("WECOM_AGW_BASE_URL")),
-		IdentityFile:   firstNonBlank(systemIdentityFile, os.Getenv("CLI_IDENTITY_FILE")),
+		IdentityFile:   systemIdentityFile,
 		HTTPClient:     &http.Client{Timeout: defaultHTTPTimeout},
 	}
 
@@ -47,7 +47,6 @@ func parseGlobalFlags(args []string) (config, []string, error) {
 	fs.SetOutput(io.Discard)
 	fs.StringVar(&cfg.GatewayBaseURL, "gateway-base-url", cfg.GatewayBaseURL, "WeCom relay gateway base URL")
 	fs.StringVar(&cfg.AGWBaseURL, "agw-base-url", cfg.AGWBaseURL, "AGW admin backend gateway base URL")
-	fs.StringVar(&cfg.IdentityFile, "identity-file", cfg.IdentityFile, "Path to JSON identity file containing ACCESS_TOKEN")
 	if err := fs.Parse(args); err != nil {
 		return cfg, nil, err
 	}
@@ -122,15 +121,15 @@ func loadDotEnv(path string) error {
 		if key == "" {
 			return fmt.Errorf("%s:%d: empty environment variable name", path, lineNum)
 		}
-		if existing, exists := os.LookupEnv(key); exists && (key != "CLI_IDENTITY_FILE" || strings.TrimSpace(existing) != "") {
+		if key == "CLI_IDENTITY_FILE" {
+			continue
+		}
+		if _, exists := os.LookupEnv(key); exists {
 			continue
 		}
 		value = strings.TrimSpace(value)
 		if unquoted, err := strconv.Unquote(value); err == nil {
 			value = unquoted
-		}
-		if key == "CLI_IDENTITY_FILE" && value != "" && !filepath.IsAbs(value) {
-			value = filepath.Join(filepath.Dir(path), value)
 		}
 		if err := os.Setenv(key, value); err != nil {
 			return fmt.Errorf("%s:%d: set %s: %w", path, lineNum, key, err)
