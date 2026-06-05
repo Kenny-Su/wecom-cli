@@ -24,7 +24,19 @@ func run(args []string) error {
 
 	switch rest[0] {
 	case "resources":
-		return runResources(cfg, rest[1:])
+		if len(rest) == 1 || isHelp(rest[1]) {
+			printResourcesUsage()
+			return nil
+		}
+		c := &wecomClient{cfg: cfg, http: cfg.HTTPClient}
+		return runResources(c, rest[1:])
+	case "users":
+		if len(rest) == 1 || isHelp(rest[1]) {
+			printUsersUsage()
+			return nil
+		}
+		c := &wecomClient{cfg: cfg, http: cfg.HTTPClient}
+		return runUsers(c, rest[1:])
 	case "calendar":
 		if len(rest) == 1 || isHelp(rest[1]) {
 			printCalendarUsage()

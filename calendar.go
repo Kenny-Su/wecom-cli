@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -484,43 +483,27 @@ func parsePartyIDs(rawParties []string) ([]int64, error) {
 }
 
 func (c *wecomClient) addCalendar(req calendarAddRequest) error {
-	token, err := c.accessToken()
-	if err != nil {
-		return err
-	}
-	path := "/cgi-bin/oa/calendar/add?access_token=" + url.QueryEscape(token)
-	return c.postWeComAndTrack(path, req, resourceTrackSpec{
-		Type:     "calendar",
-		IDFields: []string{"cal_id"},
-		Name:     req.Calendar.Summary,
-		Command:  "calendar create",
-		Request:  req,
+	return c.postWeComAndStore("/cgi-bin/oa/calendar/add", req, resourceTrackSpec{
+		ResourceType:  "calendar",
+		PlatformField: "cal_id",
+		IDFields:      []string{"cal_id"},
+		Name:          req.Calendar.Summary,
+		Command:       "calendar create",
+		Request:       req,
 	})
 }
 
 func (c *wecomClient) updateCalendar(req calendarUpdateRequest) error {
-	token, err := c.accessToken()
-	if err != nil {
-		return err
-	}
-	path := "/cgi-bin/oa/calendar/update?access_token=" + url.QueryEscape(token)
+	path := "/cgi-bin/oa/calendar/update"
 	return c.postWeCom(path, req)
 }
 
 func (c *wecomClient) getCalendar(req calendarGetRequest) error {
-	token, err := c.accessToken()
-	if err != nil {
-		return err
-	}
-	path := "/cgi-bin/oa/calendar/get?access_token=" + url.QueryEscape(token)
+	path := "/cgi-bin/oa/calendar/get"
 	return c.postWeCom(path, req)
 }
 
 func (c *wecomClient) deleteCalendar(req calendarDeleteRequest) error {
-	token, err := c.accessToken()
-	if err != nil {
-		return err
-	}
-	path := "/cgi-bin/oa/calendar/del?access_token=" + url.QueryEscape(token)
+	path := "/cgi-bin/oa/calendar/del"
 	return c.postWeCom(path, req)
 }

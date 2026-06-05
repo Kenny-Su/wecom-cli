@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -14,54 +15,84 @@ import (
 )
 
 const (
-	defaultBaseURL     = "https://qyapi.weixin.qq.com"
 	defaultHTTPTimeout = 30 * time.Second
 )
 
 type config struct {
-	CorpID        string
-	CorpSecret    string
-	BaseURL       string
-	TokenCache    string
-	ResourceTable string
-	HTTPClient    *http.Client
+	GatewayBaseURL string
+	AGWBaseURL     string
+	GatewayToken   string
+	IdentityFile   string
+	HTTPClient     *http.Client
 }
 
 func parseGlobalFlags(args []string) (config, []string, error) {
-	if err := loadDotEnv(".env"); err != nil {
+	executablePath, err := os.Executable()
+	if err != nil {
+		return config{}, nil, fmt.Errorf("resolve executable path: %w", err)
+	}
+	systemIdentityFile := strings.TrimSpace(os.Getenv("CLI_IDENTITY_FILE"))
+	if err := loadDotEnvForExecutable(executablePath); err != nil {
 		return config{}, nil, err
 	}
 
 	cfg := config{
-		CorpID:        strings.TrimSpace(os.Getenv("WECOM_CORP_ID")),
-		CorpSecret:    strings.TrimSpace(os.Getenv("WECOM_CORP_SECRET")),
-		BaseURL:       strings.TrimSpace(os.Getenv("WECOM_BASE_URL")),
-		TokenCache:    strings.TrimSpace(os.Getenv("WECOM_TOKEN_CACHE")),
-		ResourceTable: strings.TrimSpace(os.Getenv("WECOM_RESOURCE_TABLE")),
-		HTTPClient:    &http.Client{Timeout: defaultHTTPTimeout},
+		GatewayBaseURL: strings.TrimSpace(os.Getenv("WECOM_GATEWAY_BASE_URL")),
+		AGWBaseURL:     firstNonBlank(os.Getenv("AGW_GATEWAY_BASE_URL"), os.Getenv("WECOM_AGW_BASE_URL")),
+		IdentityFile:   firstNonBlank(systemIdentityFile, os.Getenv("CLI_IDENTITY_FILE")),
+		HTTPClient:     &http.Client{Timeout: defaultHTTPTimeout},
 	}
 
 	fs := flag.NewFlagSet("wecom-cli", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	fs.StringVar(&cfg.CorpID, "corpid", cfg.CorpID, "WeCom enterprise ID")
-	fs.StringVar(&cfg.CorpSecret, "corpsecret", cfg.CorpSecret, "WeCom app secret")
-	fs.StringVar(&cfg.BaseURL, "base-url", cfg.BaseURL, "WeCom API base URL")
-	fs.StringVar(&cfg.TokenCache, "token-cache", cfg.TokenCache, "access_token cache file")
-	fs.StringVar(&cfg.ResourceTable, "resource-table", cfg.ResourceTable, "created resource table file")
+	fs.StringVar(&cfg.GatewayBaseURL, "gateway-base-url", cfg.GatewayBaseURL, "WeCom relay gateway base URL")
+	fs.StringVar(&cfg.AGWBaseURL, "agw-base-url", cfg.AGWBaseURL, "AGW admin backend gateway base URL")
+	fs.StringVar(&cfg.IdentityFile, "identity-file", cfg.IdentityFile, "Path to JSON identity file containing ACCESS_TOKEN")
 	if err := fs.Parse(args); err != nil {
 		return cfg, nil, err
 	}
-	if cfg.BaseURL == "" {
-		cfg.BaseURL = defaultBaseURL
-	}
-	cfg.BaseURL = strings.TrimRight(cfg.BaseURL, "/")
-	if cfg.TokenCache == "" {
-		cfg.TokenCache = filepath.Join(homeDir(), ".wecom-cli", "access_tokens.json")
-	}
-	if cfg.ResourceTable == "" {
-		cfg.ResourceTable = filepath.Join(homeDir(), ".wecom-cli", "resources.json")
-	}
+	cfg.GatewayBaseURL = strings.TrimRight(cfg.GatewayBaseURL, "/")
+	cfg.AGWBaseURL = strings.TrimRight(firstNonBlank(cfg.AGWBaseURL, deriveAGWBaseURL(cfg.GatewayBaseURL)), "/")
+	cfg.IdentityFile = strings.TrimSpace(cfg.IdentityFile)
 	return cfg, fs.Args(), nil
+}
+
+func deriveAGWBaseURL(gatewayBaseURL string) string {
+	base := strings.TrimRight(strings.TrimSpace(gatewayBaseURL), "/")
+	if strings.HasSuffix(base, "/wecom") {
+		return strings.TrimSuffix(base, "/wecom")
+	}
+	return base
+}
+
+func loadDotEnvForExecutable(executablePath string) error {
+	if err := loadDotEnv(".env"); err != nil {
+		return err
+	}
+	skillEnv := findSkillDotEnv(executablePath)
+	if skillEnv == "" {
+		return nil
+	}
+	return loadDotEnv(skillEnv)
+}
+
+func findSkillDotEnv(executablePath string) string {
+	dir := filepath.Dir(executablePath)
+	for {
+		if fileExists(filepath.Join(dir, "SKILL.md")) {
+			return filepath.Join(dir, ".env")
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ""
+		}
+		dir = parent
+	}
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
 }
 
 func loadDotEnv(path string) error {
@@ -91,12 +122,15 @@ func loadDotEnv(path string) error {
 		if key == "" {
 			return fmt.Errorf("%s:%d: empty environment variable name", path, lineNum)
 		}
-		if _, exists := os.LookupEnv(key); exists {
+		if existing, exists := os.LookupEnv(key); exists && (key != "CLI_IDENTITY_FILE" || strings.TrimSpace(existing) != "") {
 			continue
 		}
 		value = strings.TrimSpace(value)
 		if unquoted, err := strconv.Unquote(value); err == nil {
 			value = unquoted
+		}
+		if key == "CLI_IDENTITY_FILE" && value != "" && !filepath.IsAbs(value) {
+			value = filepath.Join(filepath.Dir(path), value)
 		}
 		if err := os.Setenv(key, value); err != nil {
 			return fmt.Errorf("%s:%d: set %s: %w", path, lineNum, key, err)
@@ -106,4 +140,37 @@ func loadDotEnv(path string) error {
 		return fmt.Errorf("read %s: %w", path, err)
 	}
 	return nil
+}
+
+func firstNonBlank(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
+}
+
+func readAccessToken(identityFile string) (string, error) {
+	values, err := readIdentityFile(identityFile)
+	if err != nil {
+		return "", err
+	}
+	token := strings.TrimSpace(values["ACCESS_TOKEN"])
+	if token == "" {
+		return "", fmt.Errorf("%s: ACCESS_TOKEN is required", identityFile)
+	}
+	return token, nil
+}
+
+func readIdentityFile(path string) (map[string]string, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", path, err)
+	}
+	values := map[string]string{}
+	if err := json.Unmarshal(raw, &values); err != nil {
+		return nil, fmt.Errorf("parse identity JSON %s: %w", path, err)
+	}
+	return values, nil
 }

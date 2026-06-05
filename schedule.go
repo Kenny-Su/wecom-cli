@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -596,70 +595,42 @@ func validRepeatType(value int) bool {
 }
 
 func (c *wecomClient) addSchedule(req scheduleRequest) error {
-	token, err := c.accessToken()
-	if err != nil {
-		return err
-	}
-	path := "/cgi-bin/oa/schedule/add?access_token=" + url.QueryEscape(token)
-	return c.postWeComAndTrack(path, req, resourceTrackSpec{
-		Type:     "schedule",
-		IDFields: []string{"schedule_id"},
-		Name:     req.Schedule.Summary,
-		Command:  "schedule create",
-		Request:  req,
+	return c.postWeComAndStore("/cgi-bin/oa/schedule/add", req, resourceTrackSpec{
+		ResourceType:  "schedule",
+		PlatformField: "schedule_id",
+		IDFields:      []string{"schedule_id"},
+		Name:          req.Schedule.Summary,
+		Command:       "schedule create",
+		Request:       req,
 	})
 }
 
 func (c *wecomClient) updateSchedule(req scheduleUpdateRequest) error {
-	token, err := c.accessToken()
-	if err != nil {
-		return err
-	}
-	path := "/cgi-bin/oa/schedule/update?access_token=" + url.QueryEscape(token)
+	path := "/cgi-bin/oa/schedule/update"
 	return c.postWeCom(path, req)
 }
 
 func (c *wecomClient) getSchedule(req scheduleGetRequest) error {
-	token, err := c.accessToken()
-	if err != nil {
-		return err
-	}
-	path := "/cgi-bin/oa/schedule/get?access_token=" + url.QueryEscape(token)
+	path := "/cgi-bin/oa/schedule/get"
 	return c.postWeCom(path, req)
 }
 
 func (c *wecomClient) listSchedule(req scheduleListRequest) error {
-	token, err := c.accessToken()
-	if err != nil {
-		return err
-	}
-	path := "/cgi-bin/oa/schedule/get_by_calendar?access_token=" + url.QueryEscape(token)
+	path := "/cgi-bin/oa/schedule/get_by_calendar"
 	return c.postWeCom(path, req)
 }
 
 func (c *wecomClient) deleteSchedule(req scheduleDeleteRequest) error {
-	token, err := c.accessToken()
-	if err != nil {
-		return err
-	}
-	path := "/cgi-bin/oa/schedule/del?access_token=" + url.QueryEscape(token)
+	path := "/cgi-bin/oa/schedule/del"
 	return c.postWeCom(path, req)
 }
 
 func (c *wecomClient) addScheduleAttendees(req scheduleAttendeesRequest) error {
-	token, err := c.accessToken()
-	if err != nil {
-		return err
-	}
-	path := "/cgi-bin/oa/schedule/add_attendees?access_token=" + url.QueryEscape(token)
+	path := "/cgi-bin/oa/schedule/add_attendees"
 	return c.postWeCom(path, req)
 }
 
 func (c *wecomClient) removeScheduleAttendees(req scheduleAttendeesRequest) error {
-	token, err := c.accessToken()
-	if err != nil {
-		return err
-	}
-	path := "/cgi-bin/oa/schedule/del_attendees?access_token=" + url.QueryEscape(token)
+	path := "/cgi-bin/oa/schedule/del_attendees"
 	return c.postWeCom(path, req)
 }

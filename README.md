@@ -10,32 +10,26 @@ Build with the standard Go toolchain from the repository root.
 
 ## Configuration
 
-The CLI loads `.env` from the current working directory when present. Real
-environment variables and command-line flags take precedence.
+The CLI loads `.env` from the current working directory when present. When run
+as a packaged skill binary, it also loads `.env` next to the nearest ancestor
+`SKILL.md`. Real environment variables and command-line flags take precedence.
 
 Required for WeCom API calls:
 
 ```env
-WECOM_CORP_ID=wwxxxxxxxxxxxxxxxx
-WECOM_CORP_SECRET=your_app_secret
+WECOM_GATEWAY_BASE_URL=https://gateway.example.com/wecom
+AGW_GATEWAY_BASE_URL=https://gateway.example.com
+CLI_IDENTITY_FILE=/path/to/cli-identity.env
 ```
 
-Optional:
+Requests are sent to `WECOM_GATEWAY_BASE_URL` with the original WeCom API path.
+The CLI reads `CLI_IDENTITY_FILE` from the system environment first, falls back to `.env` when needed, then reads `ACCESS_TOKEN` from that file
+and sends it as `Authorization: Bearer <token>`. The relay gateway is
+responsible for adding or transforming the WeCom `access_token`.
 
-```env
-WECOM_BASE_URL=https://qyapi.weixin.qq.com
-WECOM_TOKEN_CACHE=~/.wecom-cli/access_tokens.json
-WECOM_RESOURCE_TABLE=~/.wecom-cli/resources.json
-```
-
-`WECOM_BASE_URL` defaults to `https://qyapi.weixin.qq.com`.
-
-`WECOM_TOKEN_CACHE` defaults to `~/.wecom-cli/access_tokens.json`. Access tokens
-are cached per `corpid + secret` and refreshed before expiry.
-
-`WECOM_RESOURCE_TABLE` defaults to `~/.wecom-cli/resources.json`. The CLI writes
-successful create responses there so agents can look up API IDs for resources
-they created earlier.
+`AGW_GATEWAY_BASE_URL` is used for resource storage and employee-WeCom mapping
+lookups. If it is not set, the CLI derives it from `WECOM_GATEWAY_BASE_URL` by
+removing a trailing `/wecom` path segment.
 
 ## Usage
 
@@ -45,29 +39,11 @@ Each command group also has command-specific help.
 Most mutating commands support `--dry-run` to print the request JSON without
 calling WeCom.
 
-## Created Resource Table
-
-WeCom APIs usually require resource IDs for follow-up operations. For example,
-a schedule cannot be fetched by name; it must be fetched by `schedule_id`.
-
-After a successful create call, the CLI records the returned ID and useful
-metadata in the resource table. Tracked resources include:
-
-- `calendar`
-- `schedule`
-- `meeting`
-- `wedrive_space`
-- `wedrive_file`
-
-Use the `resources` help output to see how to inspect the table path, list
-tracked records, filter by type, print JSON, or override the table path for
-isolated tests.
-
-The table keeps historical records. Deleting or cancelling a remote resource
-does not remove the local record.
-
-Sensitive or large request fields such as meeting passwords, selected tickets,
-and uploaded base64 file content are redacted before being stored.
+Successful create/upload commands for calendars, schedules, meetings, WeDrive
+spaces, and WeDrive files automatically store the returned WeCom ID as an AGW
+user-agent resource. Use `wecom-cli resources list` to check stored resources
+and `wecom-cli users get-by-name --user-name NAME` or related `users` commands
+to query employee WeCom user mappings.
 
 ## References
 

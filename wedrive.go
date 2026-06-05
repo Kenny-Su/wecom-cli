@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"net/url"
 	"strconv"
 	"strings"
 )
@@ -426,19 +425,7 @@ func (c *wecomClient) runWeDriveRequest(dryRun bool, req any, call func(any) err
 }
 
 func (c *wecomClient) postWeDrive(path string, req any) error {
-	token, err := c.accessToken()
-	if err != nil {
-		return err
-	}
-	return c.postWeCom(path+"?access_token="+url.QueryEscape(token), req)
-}
-
-func (c *wecomClient) postWeDriveAndTrack(path string, req any, spec resourceTrackSpec) error {
-	token, err := c.accessToken()
-	if err != nil {
-		return err
-	}
-	return c.postWeComAndTrack(path+"?access_token="+url.QueryEscape(token), req, spec)
+	return c.postWeCom(path, req)
 }
 
 func (c *wecomClient) createWeDriveSpace(req any) error {
@@ -446,12 +433,13 @@ func (c *wecomClient) createWeDriveSpace(req any) error {
 	if typed, ok := req.(weDriveSpaceCreateRequest); ok {
 		name = typed.SpaceName
 	}
-	return c.postWeDriveAndTrack("/cgi-bin/wedrive/space_create", req, resourceTrackSpec{
-		Type:     "wedrive_space",
-		IDFields: []string{"spaceid", "space_id"},
-		Name:     name,
-		Command:  "wedrive space create",
-		Request:  req,
+	return c.postWeComAndStore("/cgi-bin/wedrive/space_create", req, resourceTrackSpec{
+		ResourceType:  "wedrive_space",
+		PlatformField: "spaceid",
+		IDFields:      []string{"spaceid", "space_id"},
+		Name:          name,
+		Command:       "wedrive space create",
+		Request:       req,
 	})
 }
 

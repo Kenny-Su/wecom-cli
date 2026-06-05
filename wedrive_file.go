@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"crypto/sha1"
 	"encoding"
 	"encoding/base64"
@@ -11,8 +10,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -747,14 +744,11 @@ func (c *wecomClient) uploadWeDriveFileInChunks(req weDriveFileUploadInitRequest
 		return err
 	}
 	if initResp.HitExist {
-		response := mapFromAny(initResp)
-		if err := trackCreatedResource(c, resourceTrackSpec{
-			Type:     "wedrive_file",
-			IDFields: []string{"fileid", "file_id"},
-			Name:     req.FileName,
-			Command:  "wedrive file upload-chunk",
-			Request:  req,
-		}, response); err != nil {
+		raw, err := json.Marshal(initResp)
+		if err != nil {
+			return fmt.Errorf("marshal upload init response: %w", err)
+		}
+		if err := c.storeCreatedResource(weDriveFileChunkTrackSpec(req), raw); err != nil {
 			return err
 		}
 		return printPrettyJSON(initResp)
@@ -795,20 +789,10 @@ func (c *wecomClient) uploadWeDriveFileInChunks(req weDriveFileUploadInitRequest
 	if err != nil {
 		return err
 	}
-	response := map[string]any{}
-	if len(bytes.TrimSpace(raw)) > 0 && json.Valid(raw) {
-		_ = json.Unmarshal(raw, &response)
-	}
 	if err := printRawResponse(raw); err != nil {
 		return err
 	}
-	return trackCreatedResource(c, resourceTrackSpec{
-		Type:     "wedrive_file",
-		IDFields: []string{"fileid", "file_id"},
-		Name:     req.FileName,
-		Command:  "wedrive file upload-chunk",
-		Request:  req,
-	}, response)
+	return c.storeCreatedResource(weDriveFileChunkTrackSpec(req), raw)
 }
 
 func (c *wecomClient) postWeDriveJSON(path string, req any, out any) error {
@@ -826,21 +810,14 @@ func (c *wecomClient) postWeDriveJSON(path string, req any, out any) error {
 }
 
 func (c *wecomClient) postWeDriveJSONRaw(path string, req any) ([]byte, error) {
-	token, err := c.accessToken()
-	if err != nil {
-		return nil, err
-	}
 	rawBody, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("marshal request body: %w", err)
 	}
-	u := c.cfg.BaseURL + path + "?access_token=" + url.QueryEscape(token)
-	httpReq, err := http.NewRequest(http.MethodPost, u, bytes.NewReader(rawBody))
+	httpReq, err := c.newGatewayPostRequest(path, rawBody)
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}
-	httpReq.Header.Set("Accept", "application/json")
-	httpReq.Header.Set("Content-Type", "application/json")
 	resp, err := c.http.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("send request: %w", err)
@@ -873,12 +850,13 @@ func (c *wecomClient) createWeDriveFile(req any) error {
 	if typed, ok := req.(weDriveFileCreateRequest); ok {
 		name = typed.FileName
 	}
-	return c.postWeDriveAndTrack("/cgi-bin/wedrive/file_create", req, resourceTrackSpec{
-		Type:     "wedrive_file",
-		IDFields: []string{"fileid", "file_id"},
-		Name:     name,
-		Command:  "wedrive file create",
-		Request:  req,
+	return c.postWeComAndStore("/cgi-bin/wedrive/file_create", req, resourceTrackSpec{
+		ResourceType:  "wedrive_file",
+		PlatformField: "fileid",
+		IDFields:      []string{"fileid", "file_id"},
+		Name:          name,
+		Command:       "wedrive file create",
+		Request:       req,
 	})
 }
 
@@ -887,13 +865,25 @@ func (c *wecomClient) uploadWeDriveFile(req any) error {
 	if typed, ok := req.(weDriveFileUploadRequest); ok {
 		name = typed.FileName
 	}
-	return c.postWeDriveAndTrack("/cgi-bin/wedrive/file_upload", req, resourceTrackSpec{
-		Type:     "wedrive_file",
-		IDFields: []string{"fileid", "file_id"},
-		Name:     name,
-		Command:  "wedrive file upload",
-		Request:  req,
+	return c.postWeComAndStore("/cgi-bin/wedrive/file_upload", req, resourceTrackSpec{
+		ResourceType:  "wedrive_file",
+		PlatformField: "fileid",
+		IDFields:      []string{"fileid", "file_id"},
+		Name:          name,
+		Command:       "wedrive file upload",
+		Request:       req,
 	})
+}
+
+func weDriveFileChunkTrackSpec(req weDriveFileUploadInitRequest) resourceTrackSpec {
+	return resourceTrackSpec{
+		ResourceType:  "wedrive_file",
+		PlatformField: "fileid",
+		IDFields:      []string{"fileid", "file_id"},
+		Name:          req.FileName,
+		Command:       "wedrive file upload-chunk",
+		Request:       req,
+	}
 }
 
 func (c *wecomClient) downloadWeDriveFile(req any) error {

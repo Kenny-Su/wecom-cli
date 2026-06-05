@@ -9,14 +9,13 @@ Usage:
   wecom-cli [global flags] <command> <subcommand> [flags]
 
 Global flags:
-  --corpid        WeCom enterprise ID. Defaults to WECOM_CORP_ID
-  --corpsecret    WeCom app secret. Defaults to WECOM_CORP_SECRET
-  --base-url      WeCom API base URL. Defaults to WECOM_BASE_URL or https://qyapi.weixin.qq.com
-  --token-cache   access_token cache file. Defaults to ~/.wecom-cli/access_tokens.json
-  --resource-table created resource table file. Defaults to ~/.wecom-cli/resources.json
+  --gateway-base-url WeCom relay gateway base URL. Defaults to WECOM_GATEWAY_BASE_URL
+  --agw-base-url     AGW admin backend gateway base URL. Defaults to AGW_GATEWAY_BASE_URL or WECOM_AGW_BASE_URL
+  --identity-file    Path to JSON identity file containing ACCESS_TOKEN. Defaults to CLI_IDENTITY_FILE
 
 Commands:
-  resources  List resources created by this CLI
+  resources  Store and query AGW user-agent resources
+  users      Query employee WeCom user mappings
   calendar   Create and manage calendars
   schedule   Create and manage schedules
   meeting    Create and manage reserved meetings
@@ -27,12 +26,32 @@ Run "<command> help" for command-specific details.
 }
 
 func printResourcesUsage() {
-	fmt.Print(`Resource table commands:
-  wecom-cli resources list [--type TYPE] [--json]
-  wecom-cli resources path
+	fmt.Print(`Resource commands:
+  wecom-cli resources add --resource-type calendar --platform-field cal_id --external-id CAL_ID [flags]
+  wecom-cli resources get --id 1
+  wecom-cli resources list [--page-num 0] [--page-size 100] [--resource-type calendar]
+  wecom-cli resources update --id 1 --resource-type calendar --platform-field cal_id --external-id CAL_ID [flags]
+  wecom-cli resources delete --id 1
 
-The table is updated after successful create calls. Defaults to ~/.wecom-cli/resources.json.
-Use --resource-table or WECOM_RESOURCE_TABLE to override the path.
+Create/update optional flags:
+  --name, --parent-id, --metadata-json, --chat-id, --run-id, --status
+
+Successful calendar, schedule, meeting, and WeDrive create/upload commands
+automatically add AGW resource records when the response includes an ID.
+`)
+}
+
+func printUsersUsage() {
+	fmt.Print(`User mapping commands:
+  wecom-cli users get --id 1
+  wecom-cli users get-by-qw-user --qw-userid qw-1
+  wecom-cli users get-by-staff-id --staff-id staff-1
+  wecom-cli users get-by-legacy-staff-id --legacy-staff-id legacy-1
+  wecom-cli users get-by-name --user-name "Zhang San"
+  wecom-cli users list [filters]
+
+List filters:
+  --page-num, --page-size, --qw-userid, --staff-id, --legacy-staff-id, --mobile, --user-name
 `)
 }
 

@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/url"
 	"strconv"
 	"strings"
 )
@@ -503,52 +502,32 @@ func validMeetingRepeatType(value int) bool {
 }
 
 func (c *wecomClient) createMeeting(req meetingPayload) error {
-	token, err := c.accessToken()
-	if err != nil {
-		return err
-	}
-	path := "/cgi-bin/meeting/create?access_token=" + url.QueryEscape(token)
-	return c.postWeComAndTrack(path, req, resourceTrackSpec{
-		Type:     "meeting",
-		IDFields: []string{"meetingid", "meeting_id"},
-		Name:     req.Title,
-		Command:  "meeting create",
-		Request:  req,
+	return c.postWeComAndStore("/cgi-bin/meeting/create", req, resourceTrackSpec{
+		ResourceType:  "meeting",
+		PlatformField: "meetingid",
+		IDFields:      []string{"meetingid", "meeting_id"},
+		Name:          req.Title,
+		Command:       "meeting create",
+		Request:       req,
 	})
 }
 
 func (c *wecomClient) updateMeeting(req meetingPayload) error {
-	token, err := c.accessToken()
-	if err != nil {
-		return err
-	}
-	path := "/cgi-bin/meeting/update?access_token=" + url.QueryEscape(token)
+	path := "/cgi-bin/meeting/update"
 	return c.postWeCom(path, req)
 }
 
 func (c *wecomClient) getMeeting(req meetingIDRequest) error {
-	token, err := c.accessToken()
-	if err != nil {
-		return err
-	}
-	path := "/cgi-bin/meeting/get_info?access_token=" + url.QueryEscape(token)
+	path := "/cgi-bin/meeting/get_info"
 	return c.postWeCom(path, req)
 }
 
 func (c *wecomClient) listMeetings(req meetingUserMeetingIDRequest) error {
-	token, err := c.accessToken()
-	if err != nil {
-		return err
-	}
-	path := "/cgi-bin/meeting/get_user_meetingid?access_token=" + url.QueryEscape(token)
+	path := "/cgi-bin/meeting/get_user_meetingid"
 	return c.postWeCom(path, req)
 }
 
 func (c *wecomClient) cancelMeeting(req meetingIDRequest) error {
-	token, err := c.accessToken()
-	if err != nil {
-		return err
-	}
-	path := "/cgi-bin/meeting/cancel?access_token=" + url.QueryEscape(token)
+	path := "/cgi-bin/meeting/cancel"
 	return c.postWeCom(path, req)
 }
