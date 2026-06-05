@@ -32,7 +32,7 @@ func (c *wecomClient) requireCredentials() error {
 	}
 	if missing := requiredMissing(map[string]string{
 		"--gateway-base-url or WECOM_GATEWAY_BASE_URL": c.cfg.GatewayBaseURL,
-		"--identity-file or CLI_IDENTITY_FILE":         c.cfg.GatewayToken,
+		"CLI_IDENTITY_FILE":                            c.cfg.GatewayToken,
 	}); len(missing) > 0 {
 		return fmt.Errorf("missing required configuration: %s", strings.Join(missing, ", "))
 	}
@@ -44,7 +44,7 @@ func (c *wecomClient) requireGatewayToken() error {
 		return err
 	}
 	if missing := requiredMissing(map[string]string{
-		"--identity-file or CLI_IDENTITY_FILE": c.cfg.GatewayToken,
+		"CLI_IDENTITY_FILE": c.cfg.GatewayToken,
 	}); len(missing) > 0 {
 		return fmt.Errorf("missing required configuration: %s", strings.Join(missing, ", "))
 	}

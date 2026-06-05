@@ -51,17 +51,9 @@ func parseGlobalFlags(args []string) (config, []string, error) {
 		return cfg, nil, err
 	}
 	cfg.GatewayBaseURL = strings.TrimRight(cfg.GatewayBaseURL, "/")
-	cfg.AGWBaseURL = strings.TrimRight(firstNonBlank(cfg.AGWBaseURL, deriveAGWBaseURL(cfg.GatewayBaseURL)), "/")
+	cfg.AGWBaseURL = strings.TrimRight(cfg.AGWBaseURL, "/")
 	cfg.IdentityFile = strings.TrimSpace(cfg.IdentityFile)
 	return cfg, fs.Args(), nil
-}
-
-func deriveAGWBaseURL(gatewayBaseURL string) string {
-	base := strings.TrimRight(strings.TrimSpace(gatewayBaseURL), "/")
-	if strings.HasSuffix(base, "/wecom") {
-		return strings.TrimSuffix(base, "/wecom")
-	}
-	return base
 }
 
 func loadDotEnvForExecutable(executablePath string) error {

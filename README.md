@@ -35,12 +35,18 @@ containing:
 {"ACCESS_TOKEN":"your_gateway_token"}
 ```
 
+For example:
+
+```bash
+export CLI_IDENTITY_FILE="$HOME/.wecom-cli/cli-identity.json"
+```
+
 `WECOM_GATEWAY_BASE_URL` is used for WeCom API paths such as
 `/cgi-bin/oa/calendar/add`.
 
 `AGW_GATEWAY_BASE_URL` is used for resource storage and employee-WeCom mapping
-lookups. If it is not set, the CLI derives it from `WECOM_GATEWAY_BASE_URL` by
-removing a trailing `/wecom` path segment.
+lookups. It must be set explicitly when using AGW-backed commands or automatic
+resource storage.
 
 `CLI_IDENTITY_FILE` is intentionally not loaded from `.env`.
 
