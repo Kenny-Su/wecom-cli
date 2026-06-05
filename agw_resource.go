@@ -307,7 +307,7 @@ func (c *wecomClient) doAGWRaw(method string, path string, body any) ([]byte, er
 		return nil, err
 	}
 	if strings.TrimSpace(c.cfg.AGWBaseURL) == "" {
-		return nil, errors.New("AGW backend URL is required; set --agw-base-url, AGW_GATEWAY_BASE_URL, or WECOM_AGW_BASE_URL")
+		return nil, errors.New("AGW backend URL is required; set --agw-base-url or AGW_GATEWAY_BASE_URL")
 	}
 
 	var reader io.Reader

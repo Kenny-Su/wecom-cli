@@ -38,7 +38,7 @@ func parseGlobalFlags(args []string) (config, []string, error) {
 
 	cfg := config{
 		GatewayBaseURL: strings.TrimSpace(os.Getenv("WECOM_GATEWAY_BASE_URL")),
-		AGWBaseURL:     firstNonBlank(os.Getenv("AGW_GATEWAY_BASE_URL"), os.Getenv("WECOM_AGW_BASE_URL")),
+		AGWBaseURL:     strings.TrimSpace(os.Getenv("AGW_GATEWAY_BASE_URL")),
 		IdentityFile:   systemIdentityFile,
 		HTTPClient:     &http.Client{Timeout: defaultHTTPTimeout},
 	}
